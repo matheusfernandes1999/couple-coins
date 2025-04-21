@@ -316,7 +316,7 @@ const AddInventoryItemModal: React.FC<AddInventoryItemModalProps> = ({
 const getStyles = (colors: any) => StyleSheet.create({
     keyboardAvoidingView: { flex: 1 },
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-    modalContainer: { backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 30, maxHeight: '90%' },
+    modalContainer: { backgroundColor: colors.bottomSheet, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 30, maxHeight: '90%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary },
     label: { fontSize: 14, color: colors.textSecondary, marginBottom: 5, marginTop: 10 },

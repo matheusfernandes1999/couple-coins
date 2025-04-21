@@ -113,7 +113,7 @@ const AddShoppingListModal: React.FC<AddShoppingListModalProps> = ({ isVisible, 
 // Estilos (Similares aos outros modais)
 const getStyles = (colors: any) => StyleSheet.create({
     modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.6)'},
-    modalContainer: { backgroundColor: colors.background, borderRadius: 15, padding: 25, width: '90%', maxHeight: '80%'},
+    modalContainer: { backgroundColor: colors.bottomSheet, borderRadius: 15, padding: 25, width: '90%', maxHeight: '80%'},
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
     modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
     label: { fontSize: 14, color: colors.textSecondary, marginBottom: 5, marginTop: 10 },

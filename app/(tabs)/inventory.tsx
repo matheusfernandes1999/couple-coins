@@ -285,14 +285,12 @@ export default function InventoryScreen() {
         }
     };
 
-    // Abre modal de detalhes do item
     const handleItemPress = (item: InventoryItemData) => {
         console.log("InventoryScreen: Item pressed", item.id);
         setSelectedInventoryItem(item); // Guarda o item clicado
         setIsDetailModalVisible(true);  // Abre o modal
     };
 
-    // Funções para fechar modais
     const closeAddItemModal = () => { setIsAddItemModalVisible(false); setEditingInventoryItem(null); }; // Limpa edição
     const closeSelectListModal = () => {
         setIsSelectListModalVisible(false);
@@ -302,9 +300,7 @@ export default function InventoryScreen() {
         setIsDetailModalVisible(false);
         setSelectedInventoryItem(null); // Limpa seleção
     };
-    // ---------------------------------------------------------
-
-    // --- Render Item e Header para SectionList ---
+    
     const renderInventoryItem = ({ item }: { item: InventoryItemData }) => (
         <InventoryListItem
             item={item}
@@ -321,18 +317,13 @@ export default function InventoryScreen() {
             <Text style={styles.sectionHeaderText}>{title}</Text>
        </View>
     );
-    // -----------------------------------------
 
+    const styles = getStyles(colors);
 
-    // --- Renderização Principal ---
-    const styles = getStyles(colors); // Pega estilos do tema
-
-    // Loading inicial (do contexto do grupo ou dos itens)
     if (isLoadingGroup || isLoading) {
         return ( <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color={colors.primary} /></View> );
     }
 
-    // Se usuário não está em grupo (verificado pelo contexto)
     if (!groupId) {
         return (
              <View style={[styles.container, styles.centered]}>
@@ -348,20 +339,19 @@ export default function InventoryScreen() {
     if (sortBy === 'lastPurchase') { sortText = 'Últ. Compra'; sortIconName = 'arrow-down'; }
     else if (sortBy === 'nextPurchase') { sortText = 'Próx. Compra'; sortIconName = 'arrow-up'; }
 
-    // Renderização normal da tela
     return (
         <View style={styles.container}>
-            {/* Input de Busca */}
             <View style={styles.searchSortContainer}>
                 <View style={styles.searchContainer}>
                     <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Pesquisar item..."
+                        placeholderTextColor={colors.textSecondary}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         returnKeyType="search"
-                        clearButtonMode="while-editing" // Botão 'X' no iOS
+                        clearButtonMode="while-editing"
                     />
                     {searchQuery.length > 0 && Platform.OS !== 'ios' && (
                         <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
@@ -375,8 +365,6 @@ export default function InventoryScreen() {
                 </TouchableOpacity>
             </View>
 
-
-            {/* Lista Agrupada ou Mensagem de Vazio/Não Encontrado */}
             {inventorySections.length === 0 ? (
                 <View style={styles.centered}>
                     <Ionicons name="file-tray-outline" size={60} color={colors.textSecondary} style={styles.icon} />
@@ -395,8 +383,7 @@ export default function InventoryScreen() {
                     keyExtractor={(item, index) => item.id + index} // Chave única
                     contentContainerStyle={styles.listContent} // Estilo do container
                     stickySectionHeadersEnabled={true} // Cabeçalhos fixos no topo
-                    keyboardShouldPersistTaps="handled" // Ajuda com teclado e scroll
-                    // RefreshControl poderia ser adicionado aqui se desejado
+                    keyboardShouldPersistTaps="handled"
                 />
             )}
 
@@ -455,10 +442,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     clearButton: { padding: 5 },
     sortButton: { // Botão para ordenar
         padding: 8,
-        // backgroundColor: colors.surface,
-        // borderRadius: 8,
-        // borderWidth: 1,
-        // borderColor: colors.border,
     },
     sortText: { // Texto opcional para sort
          color: colors.primary,

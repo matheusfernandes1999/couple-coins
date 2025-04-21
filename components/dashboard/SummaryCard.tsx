@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho se necessário
+import { useTheme } from '../../context/ThemeContext';
 
 interface SummaryCardProps {
   label: string;
@@ -10,7 +10,7 @@ interface SummaryCardProps {
   iconName: React.ComponentProps<typeof Ionicons>['name'];
   iconColor: string;
   valueColor: string;
-  style?: object; // Para estilos adicionais (como width)
+  style?: object
 }
 
 const SummaryCard: React.FC<SummaryCardProps> = ({
@@ -38,17 +38,10 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
 const getStyles = (colors: any) => StyleSheet.create({
   summaryCard: {
     backgroundColor: colors.surface,
-    borderRadius: 10,
+    borderRadius: 6,
     padding: 15,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
-    marginBottom: 10
+    elevation: 1
   },
   summaryLabel: {
     fontSize: 14,

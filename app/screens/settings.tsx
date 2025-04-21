@@ -1,118 +1,229 @@
 // app/settings.tsx
-import React, { useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useTheme } from '@/context/ThemeContext'; // Importa o hook
-import { Stack, useNavigation } from 'expo-router'; // Para opções de header
+import React, { useState, useEffect, useLayoutEffect } from 'react'; // Adicionado useState, useEffect
+import {
+    View, Text, StyleSheet, TouchableOpacity, ScrollView,
+    TextInput, ActivityIndicator, Alert, Keyboard // Adicionado TextInput, ActivityIndicator, Alert, Keyboard
+} from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { Stack, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { db, auth } from '@/lib/firebase'; // Importar db e auth
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'; // Importar getDoc, setDoc, updateDoc
 
 // Define o tipo para as opções de tema, incluindo ícone
 type ThemeOption = {
-  label: string;
-  value: 'light' | 'dark' | 'system';
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+    label: string;
+    value: 'light' | 'dark' | 'system';
+    icon: React.ComponentProps<typeof Ionicons>['name'];
 };
 
 export default function SettingsScreen() {
-  const { themeMode, setThemeMode, colors, effectiveTheme } = useTheme();
-  const navigation = useNavigation();
+    const { themeMode, setThemeMode, colors } = useTheme();
+    const navigation = useNavigation();
 
-  // Define o título e estilo do header dinamicamente
-   useLayoutEffect(() => {
-     navigation.setOptions({
-       title: 'Configurações de Tema',
-       headerStyle: { backgroundColor: colors.surface }, // Fundo do header
-       headerTintColor: colors.textPrimary, // Cor do título e botão voltar
-       headerTitleStyle: { color: colors.textPrimary },
-     });
-   }, [navigation, colors]);
+    // --- Estados Locais ---
+    const [nameInput, setNameInput] = useState(''); // Input para o nome
+    const [isLoadingName, setIsLoadingName] = useState(false); // Loading ao buscar nome inicial
+    const [isSavingName, setIsSavingName] = useState(false); // Loading ao salvar nome
+    // ---------------------
+
+    // --- Busca Nome Atual ao Carregar ---
+    useEffect(() => {
+        const fetchUserName = async () => {
+            if (auth.currentUser) {
+                setIsLoadingName(true);
+                const userDocRef = doc(db, "users", auth.currentUser.uid);
+                try {
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        setNameInput(docSnap.data()?.displayName || ''); // Preenche com nome existente ou vazio
+                    } else {
+                        console.log("Documento do usuário não encontrado para preencher nome.");
+                    }
+                } catch (error) {
+                    console.error("Erro ao buscar nome do usuário:", error);
+                    // Não mostra alerta aqui, apenas não preenche
+                } finally {
+                    setIsLoadingName(false);
+                }
+            }
+        };
+
+        fetchUserName();
+    }, [auth.currentUser]);
+    
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            title: 'Configurações', // Título mais genérico agora
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: { color: colors.textPrimary },
+            headerShown: true // Garante que está visível
+        });
+    }, [navigation, colors]);
+    // -----------------------------------
+
+    const themeOptions: ThemeOption[] = [
+        { label: 'Claro', value: 'light', icon: 'sunny-outline' },
+        { label: 'Escuro', value: 'dark', icon: 'moon-outline' },
+        { label: 'Padrão do Sistema', value: 'system', icon: 'settings-outline' },
+    ];
+
+    // --- Handler para Salvar Nome ---
+    const handleSaveName = async () => {
+        if (!auth.currentUser) {
+            Alert.alert("Erro", "Usuário não autenticado.");
+            return;
+        }
+        const trimmedName = nameInput.trim();
+        if (!trimmedName) {
+            Alert.alert("Erro", "Por favor, digite um nome.");
+            return;
+        }
+
+        setIsSavingName(true);
+        Keyboard.dismiss();
+        const userDocRef = doc(db, "users", auth.currentUser.uid);
+
+        try {
+            // Usa setDoc com merge: true para criar o campo se não existir, ou atualizar se existir
+            await setDoc(userDocRef, { displayName: trimmedName }, { merge: true });
+            Alert.alert("Sucesso", "Seu nome foi atualizado!");
+        } catch (error: any) {
+            console.error("Erro ao salvar nome:", error);
+            Alert.alert("Erro", "Não foi possível salvar seu nome: " + error.message);
+        } finally {
+            setIsSavingName(false);
+        }
+    };
+    // -----------------------------
 
 
-  const themeOptions: ThemeOption[] = [
-    { label: 'Claro', value: 'light', icon: 'sunny-outline' },
-    { label: 'Escuro', value: 'dark', icon: 'moon-outline' },
-    { label: 'Padrão do Sistema', value: 'system', icon: 'settings-outline' },
-  ];
+    // --- Estilos Dinâmicos ---
+    const styles = getStyles(colors); // Gera estilos com as cores do tema
+    // -------------------------
 
-  // Cria os estilos dinamicamente
-  const styles = StyleSheet.create({
+
+    return (
+        <View style={styles.container}>
+          <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
+
+              <Text style={styles.sectionTitle}>Seu Perfil</Text>
+                 {isLoadingName ? (
+                    <ActivityIndicator color={colors.primary} style={styles.loadingName}/>
+                 ) : (
+                    <>
+                        <Text style={styles.label}>Nome Exibido</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Como você quer ser chamado(a)?"
+                            placeholderTextColor={colors.placeholder}
+                            value={nameInput}
+                            onChangeText={setNameInput}
+                            editable={!isSavingName} // Desabilita enquanto salva
+                            textContentType="name" // Ajuda o teclado/autofill
+                        />
+                        <TouchableOpacity
+                            style={[styles.saveButton, (isSavingName || !nameInput.trim()) && styles.saveButtonDisabled]}
+                            onPress={handleSaveName}
+                            disabled={isSavingName || !nameInput.trim()} // Desabilita se salvando ou vazio
+                        >
+                            {isSavingName
+                                ? <ActivityIndicator color="#FFF" size="small"/>
+                                : <Text style={styles.saveButtonText}>Salvar Nome</Text>
+                            }
+                        </TouchableOpacity>
+                    </>
+                 )}
+                 
+                <Text style={styles.sectionTitle}>Aparência</Text>
+                {themeOptions.map((option) => (
+                    <TouchableOpacity
+                        key={option.value}
+                        style={[
+                            styles.optionButton,
+                            themeMode === option.value && styles.optionButtonSelected
+                        ]}
+                        onPress={() => setThemeMode(option.value)} // Define tema via contexto
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name={option.icon} size={22} color={colors.textSecondary} style={styles.optionIcon} />
+                        <Text style={styles.optionLabel}>{option.label}</Text>
+                        {themeMode === option.value && (
+                            <Ionicons name="checkmark-circle" size={24} color={colors.primary} style={styles.checkmarkIcon} />
+                        )}
+                    </TouchableOpacity>
+                ))}
+            </ScrollView>
+        </View>
+    );
+}
+
+// --- Estilos ---
+const getStyles = (colors: any) => StyleSheet.create({
     container: {
-      flex: 1,
-      backgroundColor: colors.background,
+        flex: 1,
+        backgroundColor: colors.background,
     },
     scrollView: {
-      paddingVertical: 20,
-      paddingHorizontal: 15,
+        paddingVertical: 15, // Espaço no topo e embaixo do scroll
+        paddingHorizontal: 15,
     },
     sectionTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.textPrimary,
-      marginBottom: 15,
-      marginTop: 10,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: colors.textPrimary,
+        marginBottom: 15,
+        marginTop: 15, // Espaço acima de cada título de seção
+        paddingBottom: 5,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
     },
+    // Estilos Opções de Tema (como antes)
     optionButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surface,
-      paddingVertical: 15,
-      paddingHorizontal: 20,
-      borderRadius: 10,
-      marginBottom: 10,
-      borderWidth: 1,
+        flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+        paddingVertical: 15, paddingHorizontal: 20, borderRadius: 10,
+        marginBottom: 10, borderWidth: 1, borderColor: colors.border // Adiciona borda padrão
     },
-     optionButtonSelected: { // Estilo específico para botão selecionado
-        borderColor: colors.primary,
-        borderWidth: 2, // Borda mais grossa para indicar seleção
+    optionButtonSelected: { borderColor: colors.primary, borderWidth: 2 },
+    optionIcon: { marginRight: 15 },
+    optionLabel: { fontSize: 16, color: colors.textPrimary, flex: 1 },
+    checkmarkIcon: { marginLeft: 10 }, // Adiciona margem esquerda
+    // Estilos Seção Perfil
+    loadingName: {
+        marginVertical: 20,
+    },
+     label: { // Reutilizado para Nome Exibido
+        fontSize: 14,
+        color: colors.textSecondary,
+        marginBottom: 5,
+        // marginTop: 10, // Removido, sectionTitle já tem margem
+    },
+    input: { // Reutilizado para Nome Exibido
+        backgroundColor: colors.surface,
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        fontSize: 16,
+        color: colors.textPrimary,
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginBottom: 15, // Espaço antes do botão salvar
+    },
+     saveButton: {
+        backgroundColor: colors.primary,
+        paddingVertical: 12, // Um pouco menor
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 0, // Sem margem extra acima
      },
-    optionIcon: {
-      marginRight: 15,
-    },
-    optionLabel: {
-      fontSize: 16,
-      color: colors.textPrimary,
-      flex: 1, // Para empurrar o checkmark para a direita
-    },
-    checkmarkIcon: {
-      // Estilos para o ícone de checkmark (visível apenas se selecionado)
-    },
-  });
-
-
-  return (
-    <View style={styles.container}>
-       {/* Stack.Screen aqui permite definir opções específicas para esta tela */}
-       {/* As opções definidas em useLayoutEffect acima também funcionam */}
-      <Stack.Screen options={{ title: 'Configurações de Tema' }} />
-      <ScrollView style={styles.scrollView}>
-        <Text style={styles.sectionTitle}>Aparência</Text>
-        {themeOptions.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-               styles.optionButton,
-               themeMode === option.value && styles.optionButtonSelected // Aplica estilo extra se selecionado
-            ]}
-            onPress={() => setThemeMode(option.value)}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={option.icon}
-              size={22}
-              color={colors.textSecondary} // Cor do ícone da opção
-              style={styles.optionIcon}
-            />
-            <Text style={styles.optionLabel}>{option.label}</Text>
-             {themeMode === option.value && ( // Mostra checkmark se selecionado
-              <Ionicons
-                name="checkmark-circle"
-                size={24}
-                color={colors.primary} // Cor do checkmark
-                style={styles.checkmarkIcon}
-              />
-            )}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
+     saveButtonDisabled: {
+         backgroundColor: colors.textSecondary,
+         opacity: 0.7,
+     },
+     saveButtonText: {
+         color: '#FFFFFF',
+         fontSize: 16,
+         fontWeight: 'bold',
+     },
+});

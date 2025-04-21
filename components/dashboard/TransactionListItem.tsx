@@ -2,12 +2,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Transaction } from '@/types'; // Ajuste o caminho
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
+import { Transaction } from '@/types';
+import { useTheme } from '../../context/ThemeContext';
 
 interface TransactionListItemProps {
   item: Transaction;
-  onPress: (item: Transaction) => void; // Função chamada ao clicar no item
+  onPress: (item: Transaction) => void;
 }
 
 const TransactionListItem: React.FC<TransactionListItemProps> = ({ item, onPress }) => {
@@ -19,7 +19,6 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ item, onPress
   const iconName = isIncome ? 'arrow-up-circle' : 'arrow-down-circle';
 
   return (
-    // Envolve tudo com TouchableOpacity
     <TouchableOpacity onPress={() => onPress(item)} style={styles.container} activeOpacity={0.7}>
         {/* Ícone */}
         <View style={[styles.iconContainer, { backgroundColor: valueColor + '20'}]}>
@@ -53,16 +52,17 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: colors.border,
+    marginHorizontal: 8,
   },
   iconContainer: {
       padding: 8,
-      borderRadius: 20, // Faz um círculo
+      borderRadius: 20,
       marginRight: 12,
       alignItems: 'center',
       justifyContent: 'center',
   },
   detailsContainer: {
-    flex: 1, // Ocupa o espaço disponível
+    flex: 1,
     marginRight: 8,
   },
   categoryText: {
@@ -76,16 +76,16 @@ const getStyles = (colors: any) => StyleSheet.create({
      color: colors.textSecondary,
   },
   amountContainer: {
-      alignItems: 'flex-end', // Alinha valor e data à direita
+      alignItems: 'flex-end',
   },
   amountText: {
     fontSize: 15,
     fontWeight: 'bold',
     marginBottom: 3,
   },
-   dateText: {
-      fontSize: 12,
-      color: colors.textSecondary,
+  dateText: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 });
 

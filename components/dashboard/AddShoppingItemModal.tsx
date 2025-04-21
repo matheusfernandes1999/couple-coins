@@ -365,7 +365,7 @@ const getStyles = (colors: any) => StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fundo semi-transparente
     },
     modalContainer: {
-        backgroundColor: colors.background, // Cor de fundo do tema
+        backgroundColor: colors.bottomSheet, // Cor de fundo do tema
         borderTopLeftRadius: 20, // Bordas arredondadas no topo
         borderTopRightRadius: 20,
         padding: 20, // Espaçamento interno

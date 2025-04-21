@@ -12,7 +12,6 @@ export default function TabsLayout() {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: React.ComponentProps<typeof Ionicons>['name'] = 'alert-circle';
-
           if (route.name === 'home') {
             iconName = focused ? 'pie-chart' : 'pie-chart-outline';
           } else if (route.name === 'shopping') {
@@ -24,7 +23,6 @@ export default function TabsLayout() {
           } else if (route.name === 'profile') {
             iconName = focused ? 'person-circle' : 'person-circle-outline';
           }
-
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: colors.primary,
@@ -44,11 +42,11 @@ export default function TabsLayout() {
         },
       })}
     >
-      <Tabs.Screen name="home" options={{ title: 'Dashboard' }} />
-      <Tabs.Screen name="shopping" options={{ title: 'Listas' }} />
-      <Tabs.Screen name="inventory" options={{ title: 'Inventário' }} />
-      <Tabs.Screen name="budget" options={{ title: 'Orçamento' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Perfil' }} />
+      <Tabs.Screen name="home" options={{ title: 'Resumo', headerTitleAlign: 'center' }} />
+      <Tabs.Screen name="shopping" options={{ title: 'Listas', headerTitleAlign: 'center' }} />
+      <Tabs.Screen name="inventory" options={{ title: 'Inventário', headerTitleAlign: 'center' }} />
+      <Tabs.Screen name="budget" options={{ title: 'Orçamento', headerTitleAlign: 'center' }} />
+      <Tabs.Screen name="profile" options={{ title: 'Perfil', headerTitleAlign: 'center' }} />
     </Tabs>
   );
 }

@@ -3,43 +3,36 @@ import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { ThemeProvider, useTheme } from '../context/ThemeContext'; // Ajuste o caminho
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../lib/firebase'; // Ajuste o caminho
+import { auth } from '../lib/firebase';
 import { GroupProvider } from '@/context/GroupContext';
-import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
-// import { GestureHandlerRootView } from 'react-native-gesture-handler'; // Removido por enquanto
+import FlashMessage from "react-native-flash-message";
 
-// --- Hook Corrigido ---
 function useProtectedRoutes(user: User | null) {
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';
-    const currentPath = segments.join('/');
-
-    console.log(`useProtectedRoutes Check: User=${!!user}, Path='${currentPath}', InAuthGroup=${inAuthGroup}`);
 
     if (user && inAuthGroup) {
-      console.log(`Redirect Case 1: User logged in, but in auth group. Redirecting to /tabs/home`);
+      //console.log(`Redirect Case 1: User logged in, but in auth group. Redirecting to /tabs/home`);
       router.replace('/(tabs)/home');
     }
     else if (!user && !inAuthGroup) {
-      console.log(`Redirect Case 2: User logged out, and not in auth group. Redirecting to /auth`);
+      //console.log(`Redirect Case 2: User logged out, and not in auth group. Redirecting to /auth`);
       router.replace('/(auth)');
     }
     else {
-       console.log(`Redirect Case 3 or 4: No redirection needed.`);
+      //console.log(`Redirect Case 3 or 4: No redirection needed.`);
     }
   }, [user, segments, router]);
 }
-// --------------------
-
 
 function AppContent() {
   const { effectiveTheme, colors } = useTheme();
-  const [user, setUser] = useState<User | null>(auth.currentUser); // Inicia com o usuário atual se já disponível
+  const [user, setUser] = useState<User | null>(auth.currentUser); 
   const [authInitialized, setAuthInitialized] = useState(false);
 
    useEffect(() => {
@@ -51,10 +44,9 @@ function AppContent() {
        }
      });
      return () => unsubscribe();
-     // Removido authInitialized da dependência para garantir que sempre ouça
-   }, []); // Executa apenas uma vez na montagem
+   }, []);
 
-   useProtectedRoutes(user); // Hook de proteção
+   useProtectedRoutes(user);
 
   if (!authInitialized) {
     return (
@@ -65,15 +57,15 @@ function AppContent() {
   }
 
   return (
-    <>
-      <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-    </>
-  );
-}
+      <>
+        <StatusBar style={effectiveTheme === 'dark' ? 'light' : 'dark'} />
+          <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </>
+    );
+  }
 
 export default function RootLayout() {
   return (
@@ -81,6 +73,7 @@ export default function RootLayout() {
       <GroupProvider>
         <AppContent />
       </GroupProvider>
+      <FlashMessage position="top" type='default' statusBarHeight={42} backgroundColor='black' color='white' />
     </ThemeProvider>
   );
 }

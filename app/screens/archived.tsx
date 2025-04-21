@@ -108,13 +108,13 @@ export default function ArchivedShoppingListsScreen() {
               <Text style={styles.subtitle}>Você precisa estar em um grupo para usar a lista de compras.</Text>
          </View>
     );
-}
+  }
 
   return (
     <View style={styles.container}>
-       {/* Adiciona Stack.Screen aqui para configurar o header desta rota específica */}
-        <Stack.Screen options={{ headerShown: true, title: 'Listas Arquivadas' }} />
-
+      <Stack.Screen
+        options={{ title: "Listas Arquivadas", headerShown: true, headerStyle: { backgroundColor: colors.bottomSheet }, headerTintColor: colors.textPrimary }}
+      />
         {archivedLists.length === 0 ? (
             <View style={styles.centered}>
                 <Ionicons name="archive-outline" size={60} color={colors.textSecondary} style={styles.icon}/>

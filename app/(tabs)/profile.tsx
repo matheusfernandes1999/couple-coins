@@ -1,7 +1,7 @@
 // app/(tabs)/profile.tsx
-import React, { useState, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react'; // Adicionado useEffect
 import {
-    View, Text, StyleSheet, Button, TouchableOpacity, Alert,
+    View, Text, StyleSheet, TouchableOpacity, Alert,
     ScrollView, FlatList, TextInput, ActivityIndicator, Keyboard
 } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
@@ -9,22 +9,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
 import { useGroup } from '../../context/GroupContext';   // Ajuste o caminho
 import { auth, db } from '../../lib/firebase';          // Ajuste o caminho
-import { signOut } from 'firebase/auth';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore'; // Importa funções de array
+import { signOut, User } from 'firebase/auth'; // Importar User
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore'; // Importa getDoc
 
 export default function ProfileScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const { groupId, groupData, isLoadingGroup } = useGroup(); // Pega dados do grupo
+  // Usa o contexto para groupId, groupData e também o auth.currentUser reativo
+  const { groupId, groupData, isLoadingGroup } = useGroup();
 
-  // Estado local para nova categoria e loading/saving
+  // Estados locais
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isUpdatingCategories, setIsUpdatingCategories] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null); // <-- NOVO: Estado para nome do usuário
+  const [isLoadingName, setIsLoadingName] = useState(true); // <-- NOVO: Loading do nome
 
 
-  // Configura botão de Settings no header (como antes)
+  // Configura header (como antes)
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -35,12 +38,44 @@ export default function ProfileScreen() {
       headerStyle: { backgroundColor: colors.primary },
       headerTintColor: '#fff',
       headerTitleStyle: { fontWeight: 'bold' },
-      title: 'Perfil e Grupo', // Atualiza título
+      title: 'Perfil',
     });
   }, [navigation, router, colors]);
 
+  // --- EFEITO PARA BUSCAR NOME DO USUÁRIO ---
+  useEffect(() => {
+    const fetchUserName = async (user: User) => {
+        setIsLoadingName(true); // Inicia loading
+        const userDocRef = doc(db, "users", user.uid);
+        try {
+            const docSnap = await getDoc(userDocRef);
+            if (docSnap.exists()) {
+                // Define o nome do estado com o displayName do documento ou null se não existir
+                setUserName(docSnap.data()?.displayName || null);
+            } else {
+                console.log("Documento do usuário não encontrado ao buscar nome.");
+                setUserName(null); // Define como null se doc não existe
+            }
+        } catch (error) {
+            console.error("Erro ao buscar nome do usuário:", error);
+            setUserName(null); // Define como null em caso de erro
+        } finally {
+            setIsLoadingName(false); // Finaliza loading
+        }
+    };
 
-  // --- Handlers para Categorias ---
+    // Busca o nome SE houver um usuário logado vindo do contexto
+    if (auth.currentUser) {
+      fetchUserName(auth.currentUser);
+    } else {
+        // Se não há usuário (ex: logo após logout), limpa o nome e para o loading
+        setUserName(null);
+        setIsLoadingName(false);
+    }
+  }, [auth.currentUser]); // Roda sempre que o usuário do contexto mudar
+  // ---------------------------------------
+
+
 
   // Adiciona nova categoria
   const handleAddCategory = async () => {
@@ -79,8 +114,6 @@ export default function ProfileScreen() {
   // Deleta uma categoria existente
   const handleDeleteCategory = (categoryToDelete: string) => {
     if (!groupId) return;
-
-    // Confirmação
     Alert.alert(
       "Confirmar Exclusão",
       `Tem certeza que deseja excluir a categoria "${categoryToDelete}"? Transações ou orçamentos existentes com esta categoria não serão alterados.`,
@@ -125,9 +158,7 @@ export default function ProfileScreen() {
       Alert.alert("Erro", "Não foi possível sair.");
       setIsLoggingOut(false); // Só reseta se der erro
     }
-     // Não precisa de finally aqui, o componente será desmontado
   };
-  // --------------------
 
   // --- Renderização ---
   const styles = getStyles(colors);
@@ -137,7 +168,7 @@ export default function ProfileScreen() {
           <Text style={styles.categoryText}>{item}</Text>
           <TouchableOpacity
               onPress={() => handleDeleteCategory(item)}
-              disabled={isUpdatingCategories} // Desabilita enquanto outra operação ocorre
+              disabled={isUpdatingCategories}
               style={styles.deleteButton}
             >
               <Ionicons name="trash-bin-outline" size={20} color={colors.error} />
@@ -145,65 +176,83 @@ export default function ProfileScreen() {
       </View>
   );
 
+  // Define o que exibir como nome principal (Nome do BD ou Email)
+  const displayName = userName || auth.currentUser?.email || 'Usuário';
+
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
-        {/* Seção Informações (Pode adicionar mais infos do usuário/grupo) */}
+
+        {/* --- Seção Minha Conta ATUALIZADA --- */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Minha Conta</Text>
+            {/* Exibição do Nome */}
+            <View style={styles.infoRow}>
+                <Ionicons name="person-circle-outline" size={22} color={colors.textSecondary} style={styles.infoIcon}/>
+                {isLoadingName ? (
+                    <ActivityIndicator size="small" color={colors.textPrimary}/>
+                ) : (
+                    <Text style={styles.infoTextName}>{displayName}</Text>
+                )}
+            </View>
+             {/* Exibição do Email */}
             <View style={styles.infoRow}>
                 <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.infoIcon}/>
                 <Text style={styles.infoText}>{auth.currentUser?.email || 'Carregando...'}</Text>
             </View>
-            {/* Poderia mostrar nome do grupo aqui também */}
+             {/* Exibição do Grupo */}
             {groupData && (
                  <View style={styles.infoRow}>
                     <Ionicons name="people-outline" size={20} color={colors.textSecondary} style={styles.infoIcon}/>
-                    <Text style={styles.infoText}>{groupData.groupName || 'Grupo Familiar'}</Text>
+                    <Text style={styles.infoText}>Grupo: {groupData.groupName || 'Grupo Familiar'}</Text>
                 </View>
             )}
+             {/* Botão Logout */}
              <View style={styles.logoutButtonContainer}>
                 <TouchableOpacity
                     style={[styles.logoutButton, isLoggingOut && styles.buttonDisabled]}
                     onPress={handleLogout}
                     disabled={isLoggingOut}
                 >
-                    {isLoggingOut ? <ActivityIndicator color="#FFF"/> : <Text style={styles.logoutButtonText}>Sair (Logout)</Text>}
+                    {isLoggingOut ? <ActivityIndicator color="#FFF"/> : (
+                         <View style={styles.logoutButtonContent}>
+                             <Text style={styles.logoutButtonText}>Sair</Text>
+                             <Ionicons name="log-out-outline" size={22} color={'white'} />
+                         </View>
+                    )}
                  </TouchableOpacity>
              </View>
         </View>
+        {/* ------------------------------------- */}
 
 
-        {/* Seção Gerenciar Categorias */}
+        {/* --- Seção Gerenciar Categorias --- */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Gerenciar Categorias do Grupo</Text>
-
             {isLoadingGroup ? (
                 <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }}/>
             ) : (
                 <>
-                    {/* Lista de Categorias Existentes */}
+                    {/* Lista de Categorias */}
                     {groupData?.categories && groupData.categories.length > 0 ? (
                         <FlatList
-                            data={[...groupData.categories].sort((a,b) => a.localeCompare(b))} // Ordena alfabeticamente para exibição
+                            data={[...groupData.categories].sort((a,b) => a.localeCompare(b))}
                             renderItem={renderCategoryItem}
                             keyExtractor={(item) => item}
                             style={styles.categoryList}
-                            scrollEnabled={false} // Desabilita scroll da FlatList interna
+                            scrollEnabled={false}
                         />
                     ) : (
-                        <Text style={styles.noCategoriesText}>Nenhuma categoria personalizada adicionada.</Text>
+                        <Text style={styles.noCategoriesText}>Nenhuma categoria personalizada.</Text>
                     )}
-
-                    {/* Input para Adicionar Nova Categoria */}
+                    {/* Adicionar Categoria */}
                     <View style={styles.addCategoryContainer}>
                         <TextInput
                             style={styles.input}
-                            placeholder="Nome da nova categoria"
-                            placeholderTextColor={colors.placeholder}
+                            placeholder="Nova categoria"
                             value={newCategoryName}
                             onChangeText={setNewCategoryName}
                             editable={!isUpdatingCategories}
-                            onSubmitEditing={handleAddCategory} // Permite adicionar com "Enter"
+                            onSubmitEditing={handleAddCategory}
                             returnKeyType="done"
                         />
                         <TouchableOpacity
@@ -211,14 +260,13 @@ export default function ProfileScreen() {
                             onPress={handleAddCategory}
                             disabled={isUpdatingCategories || !newCategoryName.trim()}
                         >
-                           {isUpdatingCategories && !isLoggingOut ? <ActivityIndicator color="#FFF" size="small"/> : <Ionicons name="add" size={24} color="#FFF" />}
+                           {isUpdatingCategories ? <ActivityIndicator color="#FFF" size="small"/> : <Ionicons name="add" size={24} color="#FFF" />}
                         </TouchableOpacity>
                     </View>
                 </>
             )}
         </View>
-
-        {/* Adicionar mais seções se necessário */}
+        {/* --------------------------------- */}
 
     </ScrollView>
   );
@@ -231,52 +279,69 @@ const getStyles = (colors: any) => StyleSheet.create({
       backgroundColor: colors.background,
   },
   container: {
-    flexGrow: 1, // Permite scroll se conteúdo exceder
+    flexGrow: 1,
     padding: 20,
   },
   section: {
-      marginBottom: 30, // Espaço entre seções
+      marginBottom: 35, // Aumenta espaço entre seções
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.textPrimary,
-    marginBottom: 15,
+    marginBottom: 20, // Mais espaço abaixo do título
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingBottom: 8,
+    paddingBottom: 10, // Aumenta padding
   },
   infoRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 10,
-      paddingVertical: 5,
+      marginBottom: 12, // Mais espaço entre linhas de info
+      paddingVertical: 8, // Padding vertical
   },
   infoIcon: {
       marginRight: 15,
+      width: 22, // Garante alinhamento dos ícones
+      textAlign: 'center',
   },
   infoText: {
       fontSize: 16,
-      color: colors.textSecondary,
+      color: colors.textSecondary, // Mantém cor secundária para email/grupo
+      flexShrink: 1, // Permite quebrar linha se nome/email for longo
+  },
+   infoTextName: { // Estilo específico para o nome
+      fontSize: 17, // Um pouco maior
+      color: colors.textSecondary, // Cor primária
+      fontWeight: '500', // Leve destaque
+      flexShrink: 1,
   },
   logoutButtonContainer: {
-    marginTop: 20,
-    alignItems: 'center', // Centraliza botão
+    marginTop: 25, // Mais espaço acima do botão
+    alignItems: 'center',
   },
   logoutButton: {
     backgroundColor: colors.error,
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
-    minWidth: 150, // Largura mínima
+    minWidth: 150,
     alignItems: 'center',
+    flexDirection: 'row', // Para alinhar texto e ícone
+    justifyContent: 'center',
   },
+   logoutButtonContent: { // View interna para alinhar texto e ícone no botão
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+   },
   logoutButtonText: {
-    color: '#fff',
+    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+    marginRight: 8, // Espaço entre texto e ícone
   },
-  buttonDisabled: { // Estilo genérico para botões desabilitados
+  buttonDisabled: {
       opacity: 0.6,
   },
   categoryList: {
@@ -297,15 +362,15 @@ const getStyles = (colors: any) => StyleSheet.create({
   categoryText: {
     fontSize: 16,
     color: colors.textPrimary,
-    flex: 1, // Ocupa espaço para empurrar o botão
+    flex: 1,
     marginRight: 10,
   },
   deleteButton: {
-    padding: 5, // Área de toque
+    padding: 5,
   },
   addCategoryContainer: {
     flexDirection: 'row',
-    marginTop: 10,
+    marginTop: 15, // Mais espaço acima do input
     alignItems: 'center',
   },
   input: {
@@ -313,21 +378,22 @@ const getStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 8,
     paddingHorizontal: 15,
-    paddingVertical: 10, // Um pouco menos padding
+    paddingVertical: 10,
     fontSize: 16,
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
-    marginRight: 10, // Espaço antes do botão add
+    marginRight: 10,
+    height: 46, // Altura fixa
   },
   addButton: {
     backgroundColor: colors.primary,
-    padding: 10, // Padding quadrado
+    padding: 10,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 44, // Altura mínima para toque
-    minWidth: 44,
+    height: 46, // Mesma altura do input
+    width: 46, // Botão quadrado
   },
    noCategoriesText: {
       fontSize: 14,

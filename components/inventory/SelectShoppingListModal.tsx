@@ -93,7 +93,7 @@ const SelectShoppingListModal: React.FC<SelectShoppingListModalProps> = ({
                 {!showNewListInput ? (
                     <TouchableOpacity style={styles.createButton} onPress={() => setShowNewListInput(true)}>
                         <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
-                        <Text style={styles.createButtonText}> Criar Nova Lista + Adicionar</Text>
+                        <Text style={styles.createButtonText}>Criar Nova Lista</Text>
                     </TouchableOpacity>
                 ) : (
                     <View>
@@ -117,8 +117,6 @@ const SelectShoppingListModal: React.FC<SelectShoppingListModalProps> = ({
                           </TouchableOpacity>
                     </View>
                 )}
-
-
             </View>
         </View>
     </Modal>
@@ -128,12 +126,12 @@ const SelectShoppingListModal: React.FC<SelectShoppingListModalProps> = ({
 // Estilos
 const getStyles = (colors: any) => StyleSheet.create({
     modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)'},
-    modalContainer: { backgroundColor: colors.background, borderRadius: 15, padding: 20, width: '90%', maxHeight: '80%'},
+    modalContainer: { backgroundColor: colors.bottomSheet, borderRadius: 15, padding: 20, width: '90%', maxHeight: '80%'},
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
     modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, flexShrink: 1, marginRight: 10 },
     subHeader: { fontSize: 16, fontWeight: '500', color: colors.textSecondary, marginBottom: 10 },
     list: { maxHeight: 150, marginBottom: 10 }, // Limita altura da lista
-    listItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+    listItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
     listIcon: { marginRight: 10 },
     listName: { fontSize: 16, color: colors.textPrimary },
     emptyText: { color: colors.textSecondary, fontStyle: 'italic', textAlign: 'center', marginVertical: 10 },

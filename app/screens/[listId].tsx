@@ -390,10 +390,10 @@ const handleToggleBought = async (item: ShoppingListItemData) => {
 
   return (
     <View style={styles.container}>
-      {/* Configura o header da Stack para esta tela (redundante com useLayoutEffect mas seguro) */}
-      <Stack.Screen options={{ title: listNameParam || 'Itens da Lista' }} />
-
-      {/* Cabeçalho com Resumo da Lista */}
+      <Stack.Screen
+        options={{ title: listNameParam || 'Itens da Lista', headerShown: true, headerStyle: { backgroundColor: colors.bottomSheet }, headerTintColor: colors.textPrimary }}
+      />
+      
       <View style={styles.summaryHeader}>
             <Text style={styles.summaryText}>Comprado: {listSummary.percentage}%</Text>
             <Text style={styles.summaryText}>Gasto (Est.): {listSummary.totalSpent.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
@@ -451,21 +451,21 @@ const handleToggleBought = async (item: ShoppingListItemData) => {
 const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  listContent: { padding: 15, paddingBottom: 80 }, // Padding para a lista, espaço para FAB
+  listContent: { padding: 15, paddingBottom: 80 },
   summaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 12, // Aumenta padding vertical
+    paddingVertical: 12,
     paddingHorizontal: 15,
-    backgroundColor: colors.surface, // Cor de fundo da superfície/card
+    backgroundColor: colors.primary,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     marginBottom: 5,
   },
   summaryText: {
-    fontSize: 14, // Tamanho ligeiramente maior
-    color: colors.textSecondary,
-    fontWeight: '600', // Mais peso
+    fontSize: 14, 
+    color: colors.textPrimary,
+    fontWeight: '600', 
   },
    title: { // Estilo para mensagem de lista vazia
       fontSize: 22,

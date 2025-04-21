@@ -8,13 +8,13 @@ import { FinancialSummary } from '@/types'; // Ajuste o caminho!
 interface FinancialSummaryProps {
   monthlySummary: FinancialSummary;
   weeklySummary: FinancialSummary;
-  displayType: 'month' | 'week'; // <-- Nova Prop: Qual resumo mostrar
+  displayType: 'month' | 'week';
 }
 
 const FinancialSummaryDisplay: React.FC<FinancialSummaryProps> = ({
   monthlySummary,
   weeklySummary,
-  displayType, // <-- Recebe o tipo a exibir
+  displayType,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -22,14 +22,10 @@ const FinancialSummaryDisplay: React.FC<FinancialSummaryProps> = ({
   const getBalanceColor = (balance: number) => balance >= 0 ? colors.success : colors.error;
 
   return (
-    <View style={styles.container}> {/* Adicionado um container geral */}
-      {/* --- Renderização Condicional --- */}
+    <View style={styles.container}> 
 
-      {/* Resumo Mensal */}
       {displayType === 'month' && (
         <View style={styles.summarySection}>
-          {/* <Text style={styles.sectionTitle}>Resumo do Mês Atual</Text> */}
-          {/* O título agora pode ficar nos botões da HomeScreen */}
           <View style={styles.summaryRow}>
             <SummaryCard
               label="Entradas Mês" value={monthlySummary.income}
@@ -50,11 +46,8 @@ const FinancialSummaryDisplay: React.FC<FinancialSummaryProps> = ({
         </View>
       )}
 
-      {/* Resumo Semanal */}
       {displayType === 'week' && (
         <View style={styles.summarySection}>
-           {/* <Text style={styles.sectionTitle}>Resumo da Semana Atual</Text> */}
-           {/* O título agora pode ficar nos botões da HomeScreen */}
             <View style={styles.summaryRow}>
                <SummaryCard
                  label="Entradas Semana" value={weeklySummary.income}
@@ -74,32 +67,22 @@ const FinancialSummaryDisplay: React.FC<FinancialSummaryProps> = ({
             </View>
         </View>
       )}
-       {/* --------------------------- */}
     </View>
   );
 };
 
-// Estilos (ajustados para container e remoção de título de seção)
 const getStyles = (colors: any) => StyleSheet.create({
   container: {
       paddingHorizontal: 15,
-      // marginBottom: 15, // Pode remover ou ajustar
   },
   summarySection: {
-    // paddingHorizontal: 15, // Removido, padding está no container
-    marginBottom: 0, // Sem margem extra abaixo da seção
+    
   },
-//   sectionTitle: { // Removido, título vai para os botões
-//     fontSize: 18,
-//     fontWeight: 'bold',
-//     color: colors.textPrimary,
-//     marginBottom: 15,
-//   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  cardHalf: { width: '48%', marginBottom: 15 }, // Adiciona margem inferior
+  cardHalf: { width: '48%', marginBottom: 15 },
   cardFull: { width: '100%', marginBottom: 15 },
   cardThird: { width: '32%', marginBottom: 15 },
 });

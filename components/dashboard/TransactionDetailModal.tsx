@@ -1,18 +1,49 @@
 // components/dashboard/TransactionDetailModal.tsx
-import React from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
+import React, { useState, useEffect } from 'react'; // Import useState, useEffect
+import {
+    View, Text, Modal, StyleSheet, TouchableOpacity,
+    ScrollView, Alert, ActivityIndicator // Import ActivityIndicator
+} from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { Transaction } from '@/types'; // Ajuste o caminho se necessário
+import { Transaction } from '@/types';
+import { Timestamp, doc, getDoc } from 'firebase/firestore'; // Import doc, getDoc
+import { db } from '../../lib/firebase'; // Import db
 
 // Interface para as props do componente
 interface TransactionDetailModalProps {
-  isVisible: boolean;              // Controla a visibilidade do modal
-  onClose: () => void;             // Função para fechar o modal
-  transaction: Transaction | null; // A transação a ser exibida (ou null)
-  onEdit: (transaction: Transaction) => void; // Função chamada ao clicar em Editar
-  onDelete: (transactionId: string) => void; // Função chamada ao confirmar Excluir
+  isVisible: boolean;
+  onClose: () => void;
+  transaction: Transaction | null;
+  onEdit: (transaction: Transaction) => void;
+  onDelete: (transactionId: string) => void;
 }
+
+// Funções auxiliares de formatação (como antes)
+const formatDate = (timestamp: Timestamp | null | undefined): string => {
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate().toLocaleDateString('pt-BR', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+    }
+    return 'N/A';
+};
+const formatTime = (timestamp: Timestamp | null | undefined): string => {
+     if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate().toLocaleTimeString('pt-BR', {
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+    return '';
+};
+const formatCurrency = (value: number | null | undefined): string => {
+    if (value !== undefined && value !== null) {
+        return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+    return 'N/A';
+};
+//---------------------------------------
+
 
 const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   isVisible,
@@ -21,76 +52,97 @@ const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   onEdit,
   onDelete
 }) => {
-  const { colors } = useTheme(); // Hook para acessar as cores do tema
-  const styles = getStyles(colors); // Gera os estilos com as cores do tema
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
 
-  // Se não há transação para exibir, não renderiza nada (ou poderia mostrar um placeholder)
+  // --- Estado para Nome do Usuário ---
+  const [registeredByName, setRegisteredByName] = useState<string | null>(null);
+  const [isLoadingName, setIsLoadingName] = useState(false);
+  // ----------------------------------
+
+  // --- Efeito para Buscar Nome do Usuário ---
+  useEffect(() => {
+      const fetchUserName = async () => {
+          if (!transaction?.userId) { // Verifica se temos um ID de usuário
+              setRegisteredByName("Desconhecido"); // Define como desconhecido se não houver ID
+              setIsLoadingName(false);
+              return;
+          }
+
+          setIsLoadingName(true); // Inicia loading
+          setRegisteredByName(null); // Limpa nome anterior
+          const userDocRef = doc(db, "users", transaction.userId); // Referência ao documento do usuário
+
+          try {
+              const docSnap = await getDoc(userDocRef); // Busca o documento
+              if (docSnap.exists()) {
+                  // Se encontrar, usa o displayName ou um fallback com ID
+                  const name = docSnap.data()?.displayName;
+                  setRegisteredByName(name || `Usuário ...${transaction.userId.slice(-5)}`);
+              } else {
+                  // Se não encontrar o documento
+                  console.warn(`Documento do usuário ${transaction.userId} não encontrado.`);
+                  setRegisteredByName(`Usuário ...${transaction.userId.slice(-5)} (não encontrado)`);
+              }
+          } catch (error) {
+              console.error("Erro ao buscar nome do usuário para transação:", error);
+              setRegisteredByName(`Usuário ...${transaction.userId.slice(-5)} (erro)`); // Fallback em caso de erro
+          } finally {
+              setIsLoadingName(false); // Finaliza loading
+          }
+      };
+
+      // Busca o nome apenas quando o modal estiver visível e houver uma transação
+      if (isVisible && transaction) {
+          fetchUserName();
+      } else {
+          // Limpa nome e para loading se modal fechar ou não houver transação
+          setRegisteredByName(null);
+          setIsLoadingName(false);
+      }
+       // Limpa ao desmontar ou quando item/visibilidade mudar (antes de buscar de novo)
+       return () => {
+            setRegisteredByName(null);
+            setIsLoadingName(false);
+       }
+
+  }, [isVisible, transaction]); // Depende da visibilidade e da transação atual
+  // ---------------------------------------
+
+
+  // Não renderiza se não houver transação
   if (!transaction) {
     return null;
   }
 
-  // --- Handlers para os Botões de Ação ---
-  const handleEditPress = () => {
-    // Simplesmente chama a função onEdit passada por props,
-    // passando a transação atual para que o componente pai (HomeScreen)
-    // saiba qual transação abrir no modal de edição.
-    onEdit(transaction);
+  // Handlers para botões (como antes)
+  const handleEditPress = () => { onEdit(transaction); };
+  const handleDeletePress = () => { /* ... Alert com onDelete(transaction.id) ... */
+      Alert.alert( "Confirmar Exclusão", "Tem certeza que deseja excluir esta transação?",
+        [ { text: "Cancelar", style: "cancel" },
+          { text: "Excluir", style: "destructive", onPress: () => onDelete(transaction.id) } ]
+      );
   };
 
-  const handleDeletePress = () => {
-    // Mostra um alerta de confirmação antes de executar a exclusão
-    Alert.alert(
-      "Confirmar Exclusão", // Título do Alerta
-      "Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.", // Mensagem
-      [
-        // Botão 1: Cancelar
-        {
-          text: "Cancelar",
-          style: "cancel" // Estilo padrão para cancelar
-        },
-        // Botão 2: Excluir (executa a função onDelete)
-        {
-          text: "Excluir",
-          style: "destructive", // Estilo que indica ação destrutiva (vermelho no iOS)
-          // Chama a função onDelete passada por props com o ID da transação
-          onPress: () => onDelete(transaction.id)
-        }
-      ]
-    );
-  };
-  // ---------------------------------------
-
-  // --- Formatação de Dados para Exibição ---
+  // Formatação de dados (como antes)
   const valueColor = transaction.type === 'income' ? colors.success : colors.error;
   const valueSign = transaction.type === 'income' ? '+' : '-';
-  // Formata data e hora usando opções de localização para pt-BR
-  const formattedDate = transaction.date.toDate().toLocaleDateString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
-  const formattedTime = transaction.date.toDate().toLocaleTimeString('pt-BR', {
-    hour: '2-digit', minute: '2-digit'
-  });
-  // Formata a data de criação (se existir)
-  const formattedCreatedAt = transaction.createdAt?.toDate().toLocaleString('pt-BR', {
-      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-  }) || 'Não disponível';
-  // Exemplo: Exibe apenas parte do ID do usuário (poderia buscar o nome no futuro)
-  const registeredBy = `Usuário ID: ...${transaction.userId.slice(-5)}`;
-  // ---------------------------------------
+  const formattedDate = formatDate(transaction.date);
+  const formattedTime = formatTime(transaction.date);
+  const formattedCreatedAt = transaction.createdAt?.toDate().toLocaleString('pt-BR',{/*...*/}) || 'N/A';
+  // const registeredBy = `${transaction.userId.slice(-5)}`; // Removido
 
   return (
     <Modal
-      animationType="fade" // Animação suave de fade
-      transparent={true}     // Fundo da tela visível através do overlay
-      visible={isVisible}    // Controlado pelo estado do HomeScreen
-      onRequestClose={onClose} // Handler para o botão "Voltar" do Android
+      animationType="fade"
+      transparent={true}
+      visible={isVisible}
+      onRequestClose={onClose}
     >
-      {/* Overlay escurecido */}
       <View style={styles.modalOverlay}>
-        {/* Container do conteúdo do modal */}
         <View style={styles.modalContainer}>
           <ScrollView>
-            {/* Cabeçalho do Modal */}
+            {/* Cabeçalho */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Detalhes da Transação</Text>
               <TouchableOpacity onPress={onClose}>
@@ -100,17 +152,14 @@ const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
             {/* Seção de Detalhes */}
             <View style={styles.detailSection}>
+                {/* ... Linhas Tipo, Valor, Categoria, Data ... */}
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Tipo:</Text>
-                    <Text style={[styles.detailValue, { color: valueColor, fontWeight: 'bold' }]}>
-                        {transaction.type === 'income' ? 'Entrada' : 'Saída'}
-                    </Text>
+                    <Text style={[styles.detailValue, { color: valueColor, fontWeight: 'bold' }]}>{transaction.type === 'income' ? 'Entrada' : 'Saída'}</Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Valor:</Text>
-                    <Text style={[styles.detailValue, { color: valueColor, fontWeight: 'bold' }]}>
-                        {valueSign} {transaction.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </Text>
+                    <Text style={[styles.detailValue, { color: valueColor, fontWeight: 'bold' }]}>{valueSign} {formatCurrency(transaction.value)}</Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Categoria:</Text>
@@ -120,17 +169,21 @@ const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                     <Text style={styles.detailLabel}>Data:</Text>
                     <Text style={styles.detailValue}>{formattedDate} às {formattedTime}</Text>
                 </View>
-                {/* Mostra descrição apenas se existir */}
                 {transaction.description && (
                     <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Descrição:</Text>
                         <Text style={[styles.detailValue, styles.descriptionText]}>{transaction.description}</Text>
                     </View>
                 )}
+                {/* --- Linha Registrado Por ATUALIZADA --- */}
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Registrado por:</Text>
-                    <Text style={styles.detailValue}>{registeredBy}</Text>
+                    {isLoadingName
+                        ? <ActivityIndicator size="small" color={colors.textSecondary} style={styles.loadingSpinner}/>
+                        : <Text style={styles.detailValue}>{registeredByName || 'Desconhecido'}</Text> // Exibe nome ou fallback
+                    }
                 </View>
+                {/* -------------------------------------- */}
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Registrado em:</Text>
                     <Text style={styles.detailValue}>{formattedCreatedAt}</Text>
@@ -139,12 +192,10 @@ const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
             {/* Botões de Ação */}
             <View style={styles.actionButtons}>
-                 {/* Botão Editar */}
                  <TouchableOpacity style={[styles.buttonOutline, { borderColor: colors.primary }]} onPress={handleEditPress}>
                     <Ionicons name="pencil-outline" size={18} color={colors.primary} />
                     <Text style={[styles.buttonText, { color: colors.primary }]}> Editar</Text>
                  </TouchableOpacity>
-                 {/* Botão Excluir */}
                  <TouchableOpacity style={[styles.buttonOutline, { borderColor: colors.error }]} onPress={handleDeletePress}>
                      <Ionicons name="trash-outline" size={18} color={colors.error} />
                      <Text style={[styles.buttonText, { color: colors.error }]}> Excluir</Text>
@@ -158,89 +209,25 @@ const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   );
 };
 
-// Estilos para o Modal de Detalhes
+// --- Estilos ---
 const getStyles = (colors: any) => StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Fundo mais escuro
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.6)' },
+  modalContainer: { backgroundColor: colors.bottomSheet, borderRadius: 15, paddingVertical: 20, paddingHorizontal: 25, width: '90%', maxHeight: '80%', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
+  detailSection: { marginBottom: 20 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }, // Alinha itens verticalmente
+  detailLabel: { fontSize: 14, color: colors.textSecondary, width: '35%', fontWeight: '500' },
+  detailValue: { fontSize: 15, color: colors.textPrimary, flex: 1, textAlign: 'right' },
+  descriptionText: { textAlign: 'left' },
+  loadingSpinner: { // Estilo para alinhar o spinner à direita como o texto
+      alignSelf: 'flex-end',
+      flex: 1, // Ocupa espaço para alinhar corretamente
+      alignItems: 'flex-end', // Alinha o spinner em si à direita
   },
-  modalContainer: {
-    backgroundColor: colors.background,
-    borderRadius: 15,
-    paddingVertical: 20, // Padding vertical geral
-    paddingHorizontal: 25, // Padding horizontal geral
-    width: '90%',
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20, // Aumenta espaço abaixo do header
-    paddingBottom: 10, // Padding abaixo da linha
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  detailSection: {
-    marginBottom: 20, // Espaço antes dos botões
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12, // Espaçamento entre linhas de detalhe
-    alignItems: 'flex-start',
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: colors.textSecondary, // Cor secundária para labels
-    marginRight: 10,
-    width: '35%', // Garante alinhamento
-    fontWeight: '500',
-  },
-  detailValue: {
-    fontSize: 15,
-    color: colors.textPrimary,
-    flex: 1, // Ocupa o resto
-    textAlign: 'right',
-  },
-  descriptionText: { // Estilo específico para descrição longa
-      textAlign: 'left', // Alinha à esquerda se quebrar linha
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around', // Espaça os botões igualmente
-    marginTop: 15, // Espaço acima dos botões
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  buttonOutline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10, // Aumenta padding vertical
-    paddingHorizontal: 20, // Aumenta padding horizontal
-    borderWidth: 1.5, // Borda um pouco mais grossa
-    borderRadius: 8,
-    // borderColor é definido inline agora
-  },
-  buttonText: {
-    fontSize: 15, // Tamanho ligeiramente maior
-    fontWeight: 'bold', // Mais destaque
-    marginLeft: 6, // Espaço após o ícone
-    // color é definido inline
-  }
+  actionButtons: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: colors.border },
+  buttonOutline: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 20, borderWidth: 1.5, borderRadius: 8 },
+  buttonText: { fontSize: 15, fontWeight: 'bold', marginLeft: 6 }
 });
 
 export default TransactionDetailModal;
