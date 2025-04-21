@@ -73,7 +73,7 @@ export default function RootLayout() {
       <GroupProvider>
         <AppContent />
       </GroupProvider>
-      <FlashMessage position="top" type='default' statusBarHeight={42} backgroundColor='black' color='white' />
+      <FlashMessage position="top" type='success' statusBarHeight={42} backgroundColor={'#000'} color='white' />
     </ThemeProvider>
   );
 }

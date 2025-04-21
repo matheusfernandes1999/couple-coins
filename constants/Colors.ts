@@ -32,7 +32,7 @@ const lightColors: ColorTheme = {
 };
 
 const darkColors: ColorTheme = {
-  primary: 'rgb(8, 221, 115)',       // Azul um pouco mais brilhante para contraste no escuro
+  primary: 'rgb(5, 151, 78)',       // Azul um pouco mais brilhante para contraste no escuro
   secondary: '#30D158',     // Verde mais brilhante
   background: '#000000',    // Preto puro para OLEDs e alto contraste
   bottomSheet: '#1C1C1E', // Cinza muito escuro (quase preto) para fundo de bottom sheets

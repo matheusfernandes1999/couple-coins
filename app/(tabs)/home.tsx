@@ -281,7 +281,7 @@ export default function HomeScreen() {
 
   // Navegar para Tela Cheia de Transações
   const navigateToAllTransactions = () => {
-    router.push('/screens/transactions');
+    router.push('/screens/history');
   };
   
   // Lógica de Filtragem

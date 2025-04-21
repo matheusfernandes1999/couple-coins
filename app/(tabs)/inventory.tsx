@@ -54,7 +54,6 @@ export default function InventoryScreen() {
     const [editingInventoryItem, setEditingInventoryItem] = useState<InventoryItemData | null>(null);
 
     // --- Listener para Itens do Inventário ---
-    // --- Listener para Itens do Inventário ---
     useEffect(() => {
         if (!groupId) {
             setRawInventoryItems([]);
@@ -70,11 +69,7 @@ export default function InventoryScreen() {
             const fetchedItems: InventoryItemData[] = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                // --- VALIDAÇÃO CORRIGIDA ---
-                // Verifica apenas os campos essenciais para exibição inicial.
-                // addedAt e outros timestamps podem ser null temporariamente.
                 if (data.name && data.quantity !== undefined && data.unit) {
-                    // Adiciona mesmo que alguns campos (como addedAt) ainda não tenham sido resolvidos pelo servidor
                     fetchedItems.push({ id: doc.id, groupId: groupId, ...data } as InventoryItemData);
                 } else {
                     console.warn(`Inventory item ${doc.id} ignored due to missing essential data (name, quantity, or unit):`, { name: data.name, quantity: data.quantity, unit: data.unit });
@@ -103,7 +98,6 @@ export default function InventoryScreen() {
         const listsQuery = query(
             collection(db, "groups", groupId, "shoppingLists"),
             where("archived", "==", false),
-            //orderBy("name", "asc")
         );
         const unsubscribe = onSnapshot(listsQuery, (snapshot) => {
             const lists: ShoppingList[] = [];
@@ -287,18 +281,18 @@ export default function InventoryScreen() {
 
     const handleItemPress = (item: InventoryItemData) => {
         console.log("InventoryScreen: Item pressed", item.id);
-        setSelectedInventoryItem(item); // Guarda o item clicado
-        setIsDetailModalVisible(true);  // Abre o modal
+        setSelectedInventoryItem(item); 
+        setIsDetailModalVisible(true);
     };
 
     const closeAddItemModal = () => { setIsAddItemModalVisible(false); setEditingInventoryItem(null); }; // Limpa edição
     const closeSelectListModal = () => {
         setIsSelectListModalVisible(false);
-        setItemToAddToShoppingList(null); // Limpa item selecionado
+        setItemToAddToShoppingList(null); 
     };
     const closeDetailModal = () => {
         setIsDetailModalVisible(false);
-        setSelectedInventoryItem(null); // Limpa seleção
+        setSelectedInventoryItem(null);
     };
     
     const renderInventoryItem = ({ item }: { item: InventoryItemData }) => (

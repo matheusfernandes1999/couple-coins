@@ -14,7 +14,7 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ item, onPress
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const isIncome = item.type === 'income';
-  const valueColor = isIncome ? colors.success : colors.error;
+  const valueColor = isIncome ? colors.success : colors.error;;
   const valueSign = isIncome ? '+' : '-';
   const iconName = isIncome ? 'arrow-up-circle' : 'arrow-down-circle';
 
@@ -51,7 +51,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.border + "60",
     marginHorizontal: 8,
   },
   iconContainer: {
@@ -73,7 +73,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   descriptionText: {
      fontSize: 13,
-     color: colors.textSecondary,
+     color: colors.textSecondary + "80",
   },
   amountContainer: {
       alignItems: 'flex-end',

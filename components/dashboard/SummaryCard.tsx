@@ -41,7 +41,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderRadius: 6,
     padding: 15,
     alignItems: 'center',
-    elevation: 1
+    elevation: 0.5
   },
   summaryLabel: {
     fontSize: 14,
