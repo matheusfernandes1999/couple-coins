@@ -1,10 +1,8 @@
 // components/budget/AddBudgetModal.tsx
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, Modal, StyleSheet, TextInput, TouchableOpacity,
-  ActivityIndicator, Alert, KeyboardAvoidingView, ScrollView, Platform,
-  FlatList, // Adicionado FlatList
-  Keyboard // Adicionado Keyboard
+  View, Text, Modal, StyleSheet, TextInput, TouchableOpacity, FlatList,
+  ActivityIndicator, Alert, KeyboardAvoidingView, ScrollView, Platform, Keyboard
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,195 +10,119 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Timestamp, addDoc, collection, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { BudgetData } from '@/types';
-import { getMonthYear } from '@/utils/helpers';
+
+// --- Helpers de Data ---
+const formatToMonthYearString = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+const parseMonthYearString = (monthYear: string | null | undefined): Date => {
+    const fallbackDate = new Date(); fallbackDate.setDate(1); fallbackDate.setHours(0,0,0,0);
+    if (monthYear && typeof monthYear === 'string' && monthYear.match(/^\d{4}-\d{2}$/)) {
+        const [year, month] = monthYear.split('-').map(Number);
+        return new Date(year, month - 1, 1, 0, 0, 0, 0);
+    }
+    return new Date(fallbackDate.getFullYear(), fallbackDate.getMonth(), 1, 0, 0, 0, 0);
+}
+const formatMonthYearDisplay = (date: Date): string => date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric'});
+// -----------------------
 
 interface AddBudgetModalProps {
   isVisible: boolean;
   onClose: () => void;
   groupId: string | null;
-  existingCategories: string[]; // Lista de categorias existentes para autocomplete/validação
+  existingCategories: string[]; // Categorias disponíveis para seleção
   budgetToEdit?: BudgetData | null;
 }
 
-type BudgetType = 'monthly' | 'goal';
-
 const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
-  isVisible, onClose, groupId, existingCategories = [], budgetToEdit // Garante que existingCategories seja um array
+  isVisible, onClose, groupId, existingCategories = [], budgetToEdit
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const currentUser = auth.currentUser;
   const isEditing = !!budgetToEdit;
 
-  // --- Estados do Formulário ---
-  const [type, setType] = useState<BudgetType>('monthly');
-  const [name, setName] = useState(''); // Nome (da Meta ou do Orçamento Mensal)
+  // --- Estados ---
+  const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
-  // Específicos Mensal
-  const [category, setCategory] = useState(''); // Categoria para orçamento mensal
-  // Específicos Meta
-  const [amountSaved, setAmountSaved] = useState('0');
-  const [targetDate, setTargetDate] = useState<Date | null>(null);
-  const [showTargetDatePicker, setShowTargetDatePicker] = useState(false);
-
-  // Estados UI e Autocomplete
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [targetMonthYear, setTargetMonthYear] = useState<Date>(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]); // <-- Estado para sugestões
-  const [showSuggestions, setShowSuggestions] = useState(false);                 // <-- Estado para visibilidade das sugestões
-  // -----------------------------
+  // -------------
 
-  // --- Preencher/Resetar Formulário ---
+  // --- Preencher/Resetar ---
   useEffect(() => {
     if (isVisible) {
-      if (isEditing && budgetToEdit) {
-        // Modo Edição
-        setType(budgetToEdit.type);
+      if (isEditing && budgetToEdit && budgetToEdit.type === 'monthly') { // Garante que é mensal ao editar
         setName(budgetToEdit.name);
         setTargetAmount(budgetToEdit.targetAmount.toString().replace('.', ','));
-        if (budgetToEdit.type === 'monthly') {
-          setCategory(budgetToEdit.category || ''); // Preenche categoria para mensal
-        } else { // goal
-          setAmountSaved(budgetToEdit.amountSaved?.toString().replace('.', ',') || '0');
-          setTargetDate(budgetToEdit.targetDate?.toDate() || null);
-        }
+        setSelectedCategories(budgetToEdit.categories || []);
+        setTargetMonthYear(parseMonthYearString(budgetToEdit.monthYear));
       } else {
-        // Modo Adicionar: Reset
-        setType('monthly');
+        // Reset para adicionar
         setName('');
         setTargetAmount('');
-        setCategory(''); // Reseta categoria
-        setAmountSaved('0');
-        setTargetDate(null);
+        setSelectedCategories([]);
+        // Começa no mês atual por padrão ao adicionar
+        setTargetMonthYear(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
       }
-      // Reseta estados de UI sempre
-      setErrorMessage(null);
-      setIsLoading(false);
-      setShowTargetDatePicker(false);
-      setCategorySuggestions([]);
-      setShowSuggestions(false);
+      setErrorMessage(null); setIsLoading(false); setShowMonthPicker(false);
     }
   }, [isVisible, budgetToEdit, isEditing]);
 
-  // --- Efeito para Filtrar Sugestões de Categoria ---
-  useEffect(() => {
-    // Só filtra se for orçamento mensal e tiver input
-    if (type === 'monthly' && category.trim().length > 0 && existingCategories) {
-      const currentInput = category.trim().toLowerCase();
-      const filtered = existingCategories
-        .filter(cat => cat.toLowerCase().includes(currentInput))
-        .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
-
-      setCategorySuggestions(filtered);
-      const exactMatch = filtered.some(f => f.toLowerCase() === currentInput);
-      setShowSuggestions(filtered.length > 0 && !exactMatch); // Mostra se há sugestões e não é match exato
-    } else {
-      setCategorySuggestions([]); // Limpa se input vazio ou não é mensal
-      setShowSuggestions(false);
-    }
-  }, [category, existingCategories, type]); // Depende do input, categorias base e TIPO do orçamento
-
-  // --- Handler para Mudança de Data ---
-  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => { /* ... como antes ... */ };
-
-  // --- Handler para Selecionar Sugestão de Categoria ---
-  const handleSelectSuggestion = (selectedCat: string) => {
-      console.log("Category Suggestion selected:", selectedCat);
-      setCategory(selectedCat);        // Define input com a sugestão
-      setCategorySuggestions([]);     // Limpa sugestões
-      setShowSuggestions(false);       // Esconde lista
-      Keyboard.dismiss();             // Fecha teclado
+  // --- Handlers ---
+  const handleMonthYearChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+     setShowMonthPicker(Platform.OS === 'ios');
+     if (selectedDate) {
+         setTargetMonthYear(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+     }
+     if (Platform.OS === 'android') setShowMonthPicker(false);
   };
-  // --------------------------------------
 
-  // --- Handler para Salvar ---
+  const toggleCategorySelection = (category: string) => {
+      setSelectedCategories(prev => prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]);
+  };
+
+  // --- Salvar ---
   const handleSave = async () => {
-    if (!currentUser || !groupId) { setErrorMessage("Erro: Usuário ou grupo não identificado."); return; }
-
-    const trimmedName = name.trim(); // Nome do orçamento ou meta
-    // Nome é obrigatório para ambos os tipos
-    if (!trimmedName) {
-        setErrorMessage(type === 'monthly' ? "Digite um nome para o orçamento." : "Digite um nome para a meta.");
-        return;
-    }
-
+    if (!currentUser || !groupId) { /* ... erro ... */ return; }
+    const trimmedName = name.trim();
+    if (!trimmedName) { setErrorMessage("Digite um nome para o orçamento."); return; }
     const numTargetAmount = parseFloat(targetAmount.replace(',', '.'));
-    if (isNaN(numTargetAmount) || numTargetAmount <= 0) { setErrorMessage("Digite um valor alvo válido."); return; }
+    if (isNaN(numTargetAmount) || numTargetAmount <= 0) { setErrorMessage("Digite um limite de gasto válido."); return; }
+    if (selectedCategories.length === 0) { setErrorMessage("Selecione pelo menos uma categoria."); return; }
 
-    let finalCategoryName: string | null = null; // Categoria a ser salva (apenas para mensal)
-    let numAmountSaved = 0; // Apenas para meta
-
-    // Validações e preparações específicas por tipo
-    if (type === 'monthly') {
-        const categoryToSave = category.trim();
-        if (!categoryToSave) { setErrorMessage("Selecione ou digite uma categoria válida."); return; }
-
-        // VALIDAÇÃO ESTRITA: Categoria DEVE existir na lista (case-insensitive)
-        const validCategory = existingCategories.find(c => c.toLowerCase() === categoryToSave.toLowerCase());
-        if (!validCategory) {
-            setErrorMessage(`Categoria "${categoryToSave}" inválida. Selecione uma existente ou adicione-a no Perfil.`);
-            return; // Impede salvamento
-        }
-        finalCategoryName = validCategory; // Usa a grafia correta encontrada
-
-    } else { // goal
-        numAmountSaved = parseFloat(amountSaved.replace(',', '.')) || 0;
-        if (isNaN(numAmountSaved) || numAmountSaved < 0) { setErrorMessage("Valor guardado inválido."); return; }
-    }
-
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    // Dados comuns e específicos
-    const budgetBaseData = {
-        name: trimmedName, // Nome do Orçamento ou Meta
-        type: type,
+    const budgetPayload = {
+        name: trimmedName,
         targetAmount: numTargetAmount,
+        categories: selectedCategories.sort((a,b)=>a.localeCompare(b)), // Salva ordenado
+        monthYear: formatToMonthYearString(targetMonthYear),
+        type: 'monthly' as 'monthly', // Define o tipo
         updatedAt: serverTimestamp(),
+        // createdBy/createdAt são definidos apenas na criação
     };
 
-    let specificData = {};
-    if (type === 'monthly') {
-        specificData = {
-            category: finalCategoryName, // Categoria validada
-            monthYear: isEditing && budgetToEdit ? budgetToEdit.monthYear : getMonthYear(new Date()), // Mantém mês na edição, senão mês atual
-            amountSaved: 0, targetDate: null, // Zera campos de meta
-        };
-    } else { // goal
-        specificData = {
-            amountSaved: numAmountSaved,
-            targetDate: targetDate ? Timestamp.fromDate(targetDate) : null,
-            category: null, monthYear: null, // Zera campos mensais
-        };
-    }
+    setIsLoading(true); setErrorMessage(null);
 
     try {
-      const finalData = { ...budgetBaseData, ...specificData };
       if (isEditing && budgetToEdit) {
-        // ATUALIZAR
-        console.log("Updating budget/goal:", budgetToEdit.id);
+        // --- ATUALIZAR ---
         const budgetDocRef = doc(db, "groups", groupId, "budgets", budgetToEdit.id);
-        await updateDoc(budgetDocRef, finalData);
-        console.log("Budget/Goal updated successfully!");
+        await updateDoc(budgetDocRef, budgetPayload);
       } else {
-        // CRIAR
-        const newBudgetData = { ...finalData, createdBy: currentUser.uid, createdAt: serverTimestamp() };
-        console.log("Adding budget/goal:", newBudgetData);
-
+        // --- CRIAR ---
+        const newBudgetData = {
+            ...budgetPayload,
+            createdBy: currentUser.uid,
+            createdAt: serverTimestamp(),
+        };
         const collectionPath = collection(db, "groups", groupId, "budgets");
         await addDoc(collectionPath, newBudgetData);
-        console.log("Budget/Goal added successfully!");
       }
-      onClose(); // Fecha o modal
-
-    } catch (error: any) {
-      console.error("Error saving budget/goal:", error);
-      setErrorMessage(`Erro ao ${isEditing ? 'atualizar' : 'salvar'}.`);
-    } finally {
-      setIsLoading(false);
-    }
+      onClose(); // Fecha modal
+    } catch (error: any) { /* ... tratamento erro ... */ }
+    finally { setIsLoading(false); }
   };
-
 
   // --- UI ---
   return (
@@ -210,94 +132,73 @@ const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
             <TouchableOpacity style={styles.modalContainer} activeOpacity={1} onPress={() => Keyboard.dismiss()}>
                 <ScrollView keyboardShouldPersistTaps="handled">
                     {/* Cabeçalho */}
-                    <View style={styles.modalHeader}>/* ... Título e Botão Fechar ... */</View>
-
-                    {/* Seletor de Tipo */}
-                    <View style={styles.typeSelector}>
-                         <TouchableOpacity /* Botão Mensal */ onPress={() => setType('monthly')} disabled={isLoading || isEditing} style={[styles.typeButton, styles.typeButtonLeft, type === 'monthly' && styles.typeButtonActive]} >
-                            <Text style={[styles.typeButtonText, type === 'monthly' && styles.typeButtonTextActive]}>Orçamento Mensal</Text>
-                         </TouchableOpacity>
-                         <TouchableOpacity /* Botão Meta */ onPress={() => setType('goal')} disabled={isLoading || isEditing} style={[styles.typeButton, styles.typeButtonRight, type === 'goal' && styles.typeButtonActive]} >
-                            <Text style={[styles.typeButtonText, type === 'goal' && styles.typeButtonTextActive]}>Meta Poupança</Text>
-                         </TouchableOpacity>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>{isEditing ? 'Editar' : 'Novo'} Orçamento Mensal</Text>
+                        <TouchableOpacity onPress={onClose} disabled={isLoading}><Ionicons name="close-circle" size={28} color={colors.textSecondary} /></TouchableOpacity>
                     </View>
 
-                    {/* Nome do Orçamento/Meta */}
-                    <Text style={styles.label}>{type === 'monthly' ? 'Nome do Orçamento*' : 'Nome da Meta*'}</Text>
-                    <TextInput placeholderTextColor={colors.textSecondary} style={styles.input} value={name} onChangeText={setName} placeholder={type === 'monthly' ? 'Ex: Compras do mês' : 'Ex: Viagem Férias'} editable={!isLoading} />
+                    {/* Nome do Orçamento */}
+                    <Text style={styles.label}>Nome do Orçamento*</Text>
+                    <TextInput placeholderTextColor={colors.textSecondary} style={styles.input} value={name} onChangeText={setName} placeholder="Ex: Essenciais, Comida Fora" editable={!isLoading} />
 
-                    {/* Categoria (APENAS MENSAL) */}
-                    {type === 'monthly' && (
-                        <>
-                          <Text style={styles.label}>Categoria Vinculada*</Text>
-                          <TextInput
-                              style={styles.input}
-                              placeholder="Digite ou selecione a categoria"
-                              placeholderTextColor={colors.textSecondary}
-                              value={category}
-                              onChangeText={setCategory}
-                              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                              onFocus={() => setShowSuggestions(categorySuggestions.length > 0 && category.length > 0)}
-                              editable={!isLoading}
-                           />
-                           {/* Lista de Sugestões */}
-                           {showSuggestions && categorySuggestions.length > 0 && (
-                            <View style={styles.suggestionsContainer}>
-                              <FlatList
-                                data={categorySuggestions}
-                                keyExtractor={(item) => item}
-                                renderItem={({ item }) => (
-                                  <TouchableOpacity
-                                    style={styles.suggestionItem}
-                                    onPress={() => handleSelectSuggestion(item)}
-                                  >
-                                    <Text style={styles.suggestionText}>{item}</Text>
-                                  </TouchableOpacity>
-                                )}
-                                nestedScrollEnabled={true}
-                                keyboardShouldPersistTaps="always"
-                                scrollEnabled={false}
-                                style={{ maxHeight: 150 }}
-                              />
-                            </View>
-                          )}
-                        </>
+                     {/* Limite Mensal */}
+                     <Text style={styles.label}>Limite Mensal (R$)*</Text>
+                    <TextInput placeholderTextColor={colors.textSecondary} style={styles.input} value={targetAmount} onChangeText={setTargetAmount} keyboardType="numeric" placeholder="Ex: 1500,00" editable={!isLoading} />
+
+                    {/* Seleção de Mês/Ano */}
+                    <Text style={styles.label}>Mês/Ano do Orçamento*</Text>
+                    <TouchableOpacity style={styles.dateButton} onPress={() => setShowMonthPicker(true)} disabled={isLoading}>
+                        <Text style={styles.dateButtonText}>{targetMonthYear.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric'})}</Text>
+                        <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                    {showMonthPicker && (
+                        <DateTimePicker
+                            value={targetMonthYear} mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'} // Spinner no iOS mostra mês/ano melhor
+                            onChange={handleMonthYearChange}
+                            // maximumDate={new Date()} // Permite planejar futuro? Se sim, remova maximumDate
+                        />
                     )}
+                    {showMonthPicker && Platform.OS === 'ios' && (<TouchableOpacity onPress={() => setShowMonthPicker(false)} style={styles.closeDatePickerButton}><Text style={styles.closeDatePickerText}>Confirmar</Text></TouchableOpacity>)}
 
-                     {/* Valor Alvo */}
-                    <Text style={styles.label}>{type === 'monthly' ? 'Limite Mensal (R$)*' : 'Valor Alvo (R$)*'}</Text>
-                    <TextInput placeholderTextColor={colors.textSecondary} style={styles.input} value={targetAmount} onChangeText={setTargetAmount} keyboardType="numeric" /*...*/ />
 
-                    {/* Campos Específicos de Metas */}
-                    {type === 'goal' && (
-                        <>
-                            <Text style={styles.label}>Valor Guardado Inicial (R$)</Text>
-                            <TextInput placeholderTextColor={colors.textSecondary} style={styles.input} value={amountSaved} onChangeText={setAmountSaved} keyboardType="numeric" editable={!isLoading && !isEditing} />
-
-                            <Text style={styles.label}>Data Alvo (Opcional)</Text>
-                            <TouchableOpacity style={styles.dateButton} onPress={() => setShowTargetDatePicker(true)} /*...*/>
-                                <Text style={styles.dateButtonText}>{targetDate ? targetDate.toLocaleDateString('pt-BR') : 'Selecionar data'}</Text>
-                                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                            </TouchableOpacity>
-                            {showTargetDatePicker && ( <DateTimePicker value={targetDate || new Date()} mode="date" display='default' onChange={handleDateChange} minimumDate={new Date()} /> )}
-                            {showTargetDatePicker && Platform.OS === 'ios' && (<TouchableOpacity onPress={() => setShowTargetDatePicker(false)} style={styles.closeDatePickerButton}><Text style={styles.closeDatePickerText}>Confirmar</Text></TouchableOpacity>)}
-                       </>
-                    )}
+                    {/* Seleção de Categorias */}
+                    <Text style={styles.label}>Categorias Incluídas* (Selecione)</Text>
+                     <View style={styles.categorySelectionContainer}>
+                        {existingCategories.length === 0 ? (
+                            <Text style={styles.noCategoryText}>Adicione categorias no Perfil.</Text>
+                        ) : (
+                            // Ordena para exibição
+                            existingCategories.sort((a,b)=>a.localeCompare(b)).map(cat => {
+                                const isSelected = selectedCategories.includes(cat);
+                                return (
+                                    <TouchableOpacity
+                                        key={cat}
+                                        style={[styles.chip, isSelected ? styles.chipSelected : styles.chipIdle]}
+                                        onPress={() => toggleCategorySelection(cat)}
+                                        disabled={isLoading}
+                                    >
+                                        <Text style={[styles.chipText, isSelected ? styles.chipTextSelected : styles.chipTextIdle]}>{cat}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })
+                        )}
+                    </View>
 
                     {/* Erro e Botão Salvar */}
                     {errorMessage && <Text style={styles.errorMessage}>{errorMessage}</Text>}
                     <TouchableOpacity style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} onPress={handleSave} disabled={isLoading}>
-                        {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>{isEditing ? 'Atualizar' : 'Salvar'}</Text>}
+                        {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>{isEditing ? 'Atualizar Orçamento' : 'Salvar Orçamento'}</Text>}
                     </TouchableOpacity>
                 </ScrollView>
-                </TouchableOpacity>
+            </TouchableOpacity>
             </TouchableOpacity>
        </KeyboardAvoidingView>
     </Modal>
   );
 };
 
-// --- Estilos (Adiciona/Ajusta estilos para sugestões) ---
+// --- Estilos (Como na versão anterior do AddBudgetModal) ---
 const getStyles = (colors: any) => StyleSheet.create({
     keyboardAvoidingView: { flex: 1 },
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
@@ -306,42 +207,23 @@ const getStyles = (colors: any) => StyleSheet.create({
     modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary },
     label: { fontSize: 14, color: colors.textSecondary, marginBottom: 5, marginTop: 15 },
     input: { backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 15, paddingVertical: 12, fontSize: 16, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, marginBottom: 10 },
-    typeSelector: { flexDirection: 'row', marginBottom: 15, marginTop: 5 },
-    typeButton: { flex: 1, paddingVertical: 12, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', backgroundColor: colors.surface },
-    typeButtonLeft: { borderTopLeftRadius: 8, borderBottomLeftRadius: 8, borderRightWidth: 0.75 },
-    typeButtonRight: { borderTopRightRadius: 8, borderBottomRightRadius: 8, borderLeftWidth: 0.75 },
-    typeButtonActive: { backgroundColor: colors.primary },
-    typeButtonText: { fontSize: 15, fontWeight: '500', color: colors.primary },
-    typeButtonTextActive: { color: '#FFFFFF', fontWeight: 'bold' },
+    // Removido typeSelector
     dateButton: { backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 15, paddingVertical: 12, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
     dateButtonText: { fontSize: 16, color: colors.textPrimary },
     closeDatePickerButton: { alignItems: 'flex-end', paddingVertical: 10 },
     closeDatePickerText: { color: colors.primary, fontSize: 16, fontWeight: 'bold' },
+    categorySelectionContainer: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: colors.surface, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 5, borderWidth: 1, borderColor: colors.border, marginBottom: 15 },
+    chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, marginRight: 8, marginBottom: 8, borderWidth: 1 },
+    chipIdle: { backgroundColor: colors.background, borderColor: colors.border },
+    chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipText: { fontSize: 13 },
+    chipTextIdle: { color: colors.textSecondary },
+    chipTextSelected: { color: '#FFFFFF', fontWeight: 'bold' },
+    noCategoryText: { color: colors.textSecondary, fontStyle: 'italic', textAlign: 'center', padding: 10 },
     errorMessage: { color: colors.error, textAlign: 'center', marginTop: 10, marginBottom: 5, fontSize: 14 },
     saveButton: { backgroundColor: colors.primary, paddingVertical: 15, borderRadius: 8, alignItems: 'center', marginTop: 20 },
     saveButtonDisabled: { backgroundColor: colors.textSecondary, opacity: 0.7 },
-    saveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },    suggestionsContainer: {
-    // position: 'absolute', // Pode causar problemas com KAV/ScrollView
-    // left: 20, right: 20, top: XXX, // Posição absoluta é frágil
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-    maxHeight: 150,
-    marginTop: -10, // Tenta sobrepor levemente a margem inferior do input
-    marginBottom: 10, // Espaço abaixo
-    zIndex: 10, // Tenta manter por cima
-    elevation: 3,
-    },
-    suggestionItem: {
-        padding: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-    suggestionText: {
-        fontSize: 16,
-        color: colors.textPrimary,
-    },
+    saveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 });
 
 export default AddBudgetModal;

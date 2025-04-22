@@ -75,20 +75,28 @@ export interface InventoryItemData {
   estimatedValue: number | null
 }
 
+// Orçamento Mensal (único tipo agora nesta tela)
 export interface BudgetData {
-  id: string;                   // ID do documento no Firestore
-  name: string;                 // Nome (Ex: "Alimentação", "Viagem Europa")
-  type: 'monthly' | 'goal';     // Tipo: Orçamento mensal ou Meta de poupança
-  targetAmount: number;         // Valor alvo (limite mensal ou total da meta)
-  category?: string | null;      // Categoria associada (APENAS para type='monthly')
-  monthYear?: string | null;     // Mês/Ano (YYYY-MM) (APENAS para type='monthly')
-  amountSaved?: number;          // Valor guardado até agora (APENAS para type='goal', default 0)
-  targetDate?: Timestamp | null; // Data alvo (APENAS para type='goal', opcional)
-  createdAt: Timestamp;         // Quando foi criado
-  // Opcional: Campos de arquivamento/status
-  // isArchived?: boolean;
-  // isCompleted?: boolean;
+  category: string;
+  targetDate: any;
+  id: string;
+  name: string;           // Nome do orçamento (ex: "Supermercado + Feira")
+  targetAmount: number;   // Limite de gasto para o período
+  categories: string[];     // Array de categorias que este orçamento monitora
+  monthYear: string;        // Mês/Ano de aplicação (formato "YYYY-MM")
+  // Metadados
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+  createdBy: string;
+  type: 'monthly'; // Pode omitir se só tiver esse tipo agora, ou manter para futuro
+  spentAmount: number;
 }
+
+// Tipo processado para exibição na lista, incluindo gasto calculado
+export interface ProcessedBudgetData extends BudgetData {
+    spentAmount: number; // Gasto total das categorias vinculadas no mês/ano do orçamento
+}
+
 
 // --- Interface para Resumos ---
 export interface FinancialSummary {

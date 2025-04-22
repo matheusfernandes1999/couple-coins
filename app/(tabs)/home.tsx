@@ -401,11 +401,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
   centered: { justifyContent: 'center', alignItems: 'center', padding: 20, flex: 1 },
   groupLoadingIndicator: { marginTop: 50, marginBottom: 20 },
   errorText: { textAlign: 'center', fontSize: 16, lineHeight: 22 },
-  summaryToggleContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 15, paddingVertical: 10, marginBottom: 5 },
-  toggleButton: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface, marginHorizontal: 5 },
+  
+  summaryToggleContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 15, marginTop: 10 },
+  toggleButton: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 6, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface, marginHorizontal: 5 },
   toggleButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   toggleButtonText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   toggleButtonTextActive: { color: '#FFFFFF' },
+
   transactionFiltersContainer: { paddingHorizontal: 15, marginTop: 15, marginBottom: 10, borderTopWidth: 1, borderTopColor: colors.border + '80', paddingTop: 15 },
   filterSectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 15 },
   typeFilterContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 15, backgroundColor: colors.surface, borderRadius: 8, overflow: 'hidden' },

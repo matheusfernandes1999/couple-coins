@@ -1,5 +1,5 @@
 // app/(tabs)/profile.tsx
-import React, { useState, useEffect, useLayoutEffect } from 'react'; // Adicionado useEffect
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react'; // Adicionado useEffect
 import {
     View, Text, StyleSheet, TouchableOpacity, Alert,
     ScrollView, FlatList, TextInput, ActivityIndicator, Keyboard
@@ -25,7 +25,7 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userName, setUserName] = useState<string | null>(null); // <-- NOVO: Estado para nome do usuário
   const [isLoadingName, setIsLoadingName] = useState(true); // <-- NOVO: Loading do nome
-
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   // Configura header (como antes)
   useLayoutEffect(() => {
@@ -178,6 +178,12 @@ export default function ProfileScreen() {
 
   // Define o que exibir como nome principal (Nome do BD ou Email)
   const displayName = userName || auth.currentUser?.email || 'Usuário';
+  // Ordena categorias uma vez para usar na lógica e na lista
+  const sortedCategories = useMemo(() => {
+      return [...(groupData?.categories || [])].sort((a,b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+  }, [groupData?.categories]);
+
+  const categoriesToShow = showAllCategories ? sortedCategories : sortedCategories.slice(0, 2);
 
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
@@ -232,23 +238,11 @@ export default function ProfileScreen() {
                 <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }}/>
             ) : (
                 <>
-                    {/* Lista de Categorias */}
-                    {groupData?.categories && groupData.categories.length > 0 ? (
-                        <FlatList
-                            data={[...groupData.categories].sort((a,b) => a.localeCompare(b))}
-                            renderItem={renderCategoryItem}
-                            keyExtractor={(item) => item}
-                            style={styles.categoryList}
-                            scrollEnabled={false}
-                        />
-                    ) : (
-                        <Text style={styles.noCategoriesText}>Nenhuma categoria personalizada.</Text>
-                    )}
-                    {/* Adicionar Categoria */}
-                    <View style={styles.addCategoryContainer}>
+                      <View style={styles.addCategoryContainer}>
                         <TextInput
                             style={styles.input}
                             placeholder="Nova categoria"
+                            placeholderTextColor={colors.textSecondary}
                             value={newCategoryName}
                             onChangeText={setNewCategoryName}
                             editable={!isUpdatingCategories}
@@ -262,7 +256,36 @@ export default function ProfileScreen() {
                         >
                            {isUpdatingCategories ? <ActivityIndicator color="#FFF" size="small"/> : <Ionicons name="add" size={24} color="#FFF" />}
                         </TouchableOpacity>
-                    </View>
+                      </View>
+                    {/* Lista de Categorias */}
+                    {sortedCategories.length > 0 ? (
+                        <FlatList
+                            data={categoriesToShow} // <-- USA O ARRAY LIMITADO OU COMPLETO
+                            renderItem={renderCategoryItem}
+                            keyExtractor={(item) => item}
+                            style={styles.categoryList}
+                            scrollEnabled={false} // Scroll principal é o da tela
+                        />
+                    ) : (
+                        <Text style={styles.noCategoriesText}>Nenhuma categoria personalizada.</Text>
+                    )}
+
+                    {/* --- Botão Ver mais/Ver menos --- */}
+                    {sortedCategories.length > 4 && ( // Só mostra se tem mais de 4
+                        <TouchableOpacity
+                            style={styles.toggleButton}
+                            onPress={() => setShowAllCategories(prev => !prev)} // Alterna estado
+                        >
+                            <Text style={styles.toggleButtonText}>
+                                {showAllCategories ? 'Ver menos' : 'Ver mais'}
+                            </Text>
+                            <Ionicons
+                                name={showAllCategories ? "chevron-up-outline" : "chevron-down-outline"}
+                                size={18}
+                                color={colors.primary}
+                            />
+                        </TouchableOpacity>
+                    )}
                 </>
             )}
         </View>
@@ -370,7 +393,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   addCategoryContainer: {
     flexDirection: 'row',
-    marginTop: 15, // Mais espaço acima do input
+    marginBottom: 15, // Mais espaço acima do input
     alignItems: 'center',
   },
   input: {
@@ -401,5 +424,18 @@ const getStyles = (colors: any) => StyleSheet.create({
       textAlign: 'center',
       fontStyle: 'italic',
       marginVertical: 10,
+  },
+  toggleButton: { // Estilo para botão "Ver mais/menos"
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 5, // Espaço após a lista (ou 4 itens)
+  },
+  toggleButtonText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: '500',
+      marginRight: 4,
   }
 });
