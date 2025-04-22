@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
+import { useTheme } from '../../context/ThemeContext';
 
 interface NoGroupViewProps {
   newGroupName: string;
@@ -30,7 +30,6 @@ const NoGroupView: React.FC<NoGroupViewProps> = ({
         Crie ou entre em um grupo familiar para gerenciar as finanças.
       </Text>
 
-      {/* Input Nome do Novo Grupo */}
       <TextInput
         style={[styles.newGroupNameInput]}
         placeholder="Nome do Novo Grupo"
@@ -40,7 +39,6 @@ const NoGroupView: React.FC<NoGroupViewProps> = ({
         editable={!isCreating && !isJoining}
       />
 
-      {/* Botão Criar Grupo */}
       <TouchableOpacity
         style={[styles.button, styles.createButton]}
         onPress={onCreateGroup}
@@ -49,7 +47,6 @@ const NoGroupView: React.FC<NoGroupViewProps> = ({
         {isCreating ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>Criar Grupo</Text>}
       </TouchableOpacity>
 
-      {/* Seção para Entrar com Código */}
       <Text style={styles.joinLabel}>Já tem um convite?</Text>
       <View style={styles.joinContainer}>
         <TextInput
@@ -74,7 +71,7 @@ const NoGroupView: React.FC<NoGroupViewProps> = ({
 };
 
 const getStyles = (colors: any) => StyleSheet.create({
-   container: { flexGrow: 1 /* Permite scroll se necessário */, backgroundColor: colors.background },
+   container: { flexGrow: 1, backgroundColor: colors.background },
    centered: { justifyContent: 'center', alignItems: 'center', padding: 20 },
    noGroupContainer: { paddingHorizontal: 30 },
    noGroupIcon: { marginBottom: 20 },

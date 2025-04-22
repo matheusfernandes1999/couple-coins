@@ -3,14 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity, FlatList, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { ShoppingList, InventoryItemData } from '@/types'; // Adiciona InventoryItemData
+import { ShoppingList, InventoryItemData } from '@/types'; 
+import { showMessage } from 'react-native-flash-message';
 
 interface SelectShoppingListModalProps {
   isVisible: boolean;
   onClose: () => void;
   groupId: string | null;
-  availableLists: ShoppingList[]; // Recebe as listas ativas
-  itemToAdd: InventoryItemData | null; // Item do inventário a ser adicionado
+  availableLists: ShoppingList[];
+  itemToAdd: InventoryItemData | null; 
   onAddToExistingList: (listId: string, itemData: InventoryItemData) => Promise<void>;
   onAddToNewList: (newListName: string, itemData: InventoryItemData) => Promise<void>;
 }
@@ -23,9 +24,8 @@ const SelectShoppingListModal: React.FC<SelectShoppingListModalProps> = ({
   const styles = getStyles(colors);
   const [showNewListInput, setShowNewListInput] = useState(false);
   const [newListName, setNewListName] = useState('');
-  const [isCreatingList, setIsCreatingList] = useState(false); // Loading para criar lista + item
+  const [isCreatingList, setIsCreatingList] = useState(false); 
 
-  // Reseta estado interno ao fechar/abrir
   useEffect(() => {
       if (!isVisible) {
           setShowNewListInput(false);
@@ -34,22 +34,25 @@ const SelectShoppingListModal: React.FC<SelectShoppingListModalProps> = ({
       }
   }, [isVisible]);
 
-
   const handleSelectExisting = (listId: string) => {
       if (itemToAdd) {
-          onAddToExistingList(listId, itemToAdd); // Chama handler do pai
+          onAddToExistingList(listId, itemToAdd);
       }
-      // onClose(); // O pai fecha o modal após a ação
   };
 
   const handleCreateAndAdd = async () => {
       if (itemToAdd && newListName.trim()) {
-          setIsCreatingList(true); // Ativa loading
-          await onAddToNewList(newListName.trim(), itemToAdd); // Chama handler do pai
-          setIsCreatingList(false); // Desativa loading
-          // onClose(); // O pai fecha o modal após a ação
+          setIsCreatingList(true);
+          await onAddToNewList(newListName.trim(), itemToAdd); 
+          setIsCreatingList(false);
       } else if (!newListName.trim()) {
           Alert.alert("Erro", "Digite um nome para a nova lista.");
+          showMessage({
+            message: "Ops!",
+            description: "Digite um nome para a nova lista.",
+            backgroundColor: colors.warning,
+            color: colors.textPrimary,
+          });
       }
   };
 
@@ -74,7 +77,6 @@ const SelectShoppingListModal: React.FC<SelectShoppingListModalProps> = ({
                     <TouchableOpacity onPress={onClose}><Ionicons name="close-circle" size={28} color={colors.textSecondary} /></TouchableOpacity>
                 </View>
 
-                {/* Lista de Listas Existentes */}
                 <Text style={styles.subHeader}>Listas Existentes</Text>
                 {availableLists.length === 0 ? (
                     <Text style={styles.emptyText}>Nenhuma lista de compras ativa encontrada.</Text>
@@ -87,8 +89,6 @@ const SelectShoppingListModal: React.FC<SelectShoppingListModalProps> = ({
                         />
                 )}
 
-
-                {/* Opção de Criar Nova Lista */}
                 <View style={styles.separator} />
                 {!showNewListInput ? (
                     <TouchableOpacity style={styles.createButton} onPress={() => setShowNewListInput(true)}>
@@ -123,14 +123,13 @@ const SelectShoppingListModal: React.FC<SelectShoppingListModalProps> = ({
   );
 };
 
-// Estilos
 const getStyles = (colors: any) => StyleSheet.create({
     modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)'},
     modalContainer: { backgroundColor: colors.bottomSheet, borderRadius: 15, padding: 20, width: '90%', maxHeight: '80%'},
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
     modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, flexShrink: 1, marginRight: 10 },
     subHeader: { fontSize: 16, fontWeight: '500', color: colors.textSecondary, marginBottom: 10 },
-    list: { maxHeight: 150, marginBottom: 10 }, // Limita altura da lista
+    list: { maxHeight: 150, marginBottom: 10 },
     listItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
     listIcon: { marginRight: 10 },
     listName: { fontSize: 16, color: colors.textPrimary },

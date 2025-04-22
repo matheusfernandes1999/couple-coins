@@ -68,12 +68,14 @@ function AppContent() {
   }
 
 export default function RootLayout() {
+  const { colors } = useTheme();
+  
   return (
     <ThemeProvider>
       <GroupProvider>
         <AppContent />
       </GroupProvider>
-      <FlashMessage position="top" type='success' statusBarHeight={42} backgroundColor={'#000'} color='white' />
+      <FlashMessage position="top" statusBarHeight={42} textStyle={{fontWeight: 'bold', textAlign: 'center'}} titleStyle={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center'}} />
     </ThemeProvider>
   );
 }

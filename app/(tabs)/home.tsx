@@ -39,7 +39,6 @@ export default function HomeScreen() {
   const currentUser = auth.currentUser;
   const router = useRouter();
 
-  // --- Estados Específicos da HomeScreen ---
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
@@ -49,19 +48,16 @@ export default function HomeScreen() {
   const [summaryViewType, setSummaryViewType] = useState<'month' | 'week'>('month');
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
 
-  // Estados UI "Sem Grupo"
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [newGroupNameInput, setNewGroupNameInput] = useState('');
   const [isJoiningGroup, setIsJoiningGroup] = useState(false);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
-  // Estados Modais
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false); 
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null); 
 
-  // --- Funções de Cálculo ---
   const calculateSummaries = useCallback((trans: Transaction[]) => {
     const now = new Date();
     const currentMonthStr = getMonthYear(now);
@@ -71,12 +67,10 @@ export default function HomeScreen() {
     trans.forEach(t => {
       if (!t.date) return;
       const transactionDate = t.date.toDate();
-      // Mês
       if (getMonthYear(transactionDate) === currentMonthStr) {
         if (t.type === 'income') monthlyIncome += t.value;
         else if (t.type === 'expense') monthlyExpenses += t.value;
       }
-      // Semana
       if (transactionDate >= currentWeekRange.start && transactionDate <= currentWeekRange.end) {
         if (t.type === 'income') weeklyIncome += t.value;
         else if (t.type === 'expense') weeklyExpenses += t.value;
@@ -93,8 +87,6 @@ export default function HomeScreen() {
       setIsLoadingTransactions(false);
       return;
     }
-
-    console.log("HomeScreen: Setting up transactions listener for group:", groupId);
     if (!isLoadingGroup) setIsLoadingTransactions(true);
 
     const transactionsQuery = query(
@@ -124,6 +116,8 @@ export default function HomeScreen() {
       showMessage({
         message: "Ops!",
         description: "Não foi possível carregar as transações.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
       });
       setTransactions([]);
       calculateSummaries([]);
@@ -132,19 +126,17 @@ export default function HomeScreen() {
     });
 
     return () => {
-      console.log("HomeScreen: Cleaning up transactions listener for:", groupId);
       unsubscribeTransactions();
     };
   }, [groupId, calculateSummaries, isLoadingGroup]);
 
-  // --- Handlers ---
-  // Criar Grupo
   const handleCreateGroup = async () => {
     if (!currentUser || !newGroupNameInput.trim()) { 
       showMessage({
         message: "Ops!",
         description: "Digite um nome válido!",
-
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
       });
       return; 
     }
@@ -163,6 +155,8 @@ export default function HomeScreen() {
       showMessage({
         message: "Parabéns!",
         description: "Grupo criado!",
+        backgroundColor: colors.success,
+        color: colors.textPrimary,
       });
 
       fetchUserGroupId();
@@ -170,18 +164,21 @@ export default function HomeScreen() {
       showMessage({
         message: "Ops!",
         description: "Não foi possível criar o grupo.",	
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
       });
       console.error(error); 
     }
     finally { setIsCreatingGroup(false); }
   };
 
-  // Entrar Grupo
   const handleJoinGroup = async () => {
     if (!currentUser || !inviteCodeInput.trim()) { 
       showMessage({
         message: "Ops!",
         description: "Digite um código válido!",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
       });
       return; 
     }
@@ -200,12 +197,16 @@ export default function HomeScreen() {
       showMessage({
         message: "Deu certo!",
         description: "Você entrou no grupo!",
+        backgroundColor: colors.success,
+        color: colors.textPrimary,
       });
       fetchUserGroupId();
     } catch (error: any) { 
       showMessage({
         message: "Ops!",
         description: error.message || "Não foi possível entrar.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
       });
       console.error(error); 
     }
@@ -215,6 +216,8 @@ export default function HomeScreen() {
   const onRefresh = useCallback(async () => {
     showMessage({
       message: "Atualizando...",
+      backgroundColor: colors.bottomSheet,
+      color: colors.textPrimary,
     });
     setIsRefreshing(true);
     fetchUserGroupId();
@@ -226,6 +229,8 @@ export default function HomeScreen() {
       showMessage({
         message: "Ops!",
         description: "Grupo não carregado.",
+        backgroundColor: colors.bottomSheet,
+        color: colors.textPrimary,
       }); 
       return; 
     }
@@ -259,6 +264,8 @@ export default function HomeScreen() {
       showMessage({
         message: "Ops!",
         description: "ID do grupo não encontrado.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
       });
       return; 
     }
@@ -269,37 +276,58 @@ export default function HomeScreen() {
         showMessage({
           message: "Deu certo!",
           description: "Transação excluída!",
+          backgroundColor: colors.success,
+        color: colors.textPrimary,
         });
     } catch (error) {  
         showMessage({
           message: "Ops!",
           description: "Não foi possível excluir.",
+          backgroundColor: colors.error,
+        color: colors.textPrimary,
         });
         console.error(error); 
     }
   };
 
-  // Navegar para Tela Cheia de Transações
   const navigateToAllTransactions = () => {
     router.push('/screens/history');
   };
   
-  // Lógica de Filtragem
   const filteredTransactions = useMemo(() => {
     let itemsToFilter = [...transactions];
 
-    // 1. Filtra por Tipo
     if (transactionTypeFilter !== 'all') {
       itemsToFilter = itemsToFilter.filter(t => t.type === transactionTypeFilter);
     }
-    // 2. Filtra por Categorias
     if (selectedCategories.length > 0) {
       itemsToFilter = itemsToFilter.filter(t => selectedCategories.includes(t.category));
     }
-
     return itemsToFilter;
   }, [transactions, selectedCategories, transactionTypeFilter]);
 
+    const handleCycleTransactionTypeFilter = () => {
+      setTransactionTypeFilter(currentFilter => {
+          if (currentFilter === 'all') return 'income';
+          if (currentFilter === 'income') return 'expense';
+          return 'all';
+      });
+    };
+
+    let typeFilterText = 'Todas';
+    let typeFilterIcon: React.ComponentProps<typeof Ionicons>['name'] = 'chevron-collapse-outline';
+    let valueColor = '#ffbf00';
+  
+    if (transactionTypeFilter === 'income') {
+      typeFilterText = 'Entradas';
+      typeFilterIcon = 'arrow-up-circle';
+      valueColor = colors.success;
+    } else if (transactionTypeFilter === 'expense') {
+      typeFilterText = 'Saídas';
+      typeFilterIcon = 'arrow-down-circle';
+      valueColor = colors.error;
+    }
+  
   const styles = getStyles(colors);
 
   if (isLoadingGroup && !isRefreshing) { return ( <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color={colors.primary} /></View> ); }
@@ -312,24 +340,16 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.summaryHeader}>
+        <Text style={[styles.summaryText, summaryViewType === 'month' && styles.summaryTextActive]} onPress={() => setSummaryViewType('month')}>Mês</Text>
+        <Text style={[styles.summaryText, summaryViewType === 'week' && styles.summaryTextActive]} onPress={() => setSummaryViewType('week')}>Semana</Text>
+        <TouchableOpacity style={[styles.viewAllButton]} onPress={navigateToAllTransactions}><Text style={styles.summaryText}>Ver todas</Text><Ionicons name="arrow-forward" size={16} color={colors.secondary}/></TouchableOpacity>
+      </View>
       <ScrollView
         style={styles.scrollContainer}
         refreshControl={ <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} /> }
         keyboardShouldPersistTaps="handled"
       >
-         <View style={styles.summaryToggleContainer}>
-            <TouchableOpacity
-                style={[styles.toggleButton, summaryViewType === 'month' && styles.toggleButtonActive]}
-                onPress={() => setSummaryViewType('month')}>
-                <Text style={[styles.toggleButtonText, summaryViewType === 'month' && styles.toggleButtonTextActive]}>Mês Atual</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-                style={[styles.toggleButton, summaryViewType === 'week' && styles.toggleButtonActive]}
-                onPress={() => setSummaryViewType('week')}>
-                 <Text style={[styles.toggleButtonText, summaryViewType === 'week' && styles.toggleButtonTextActive]}>Semana Atual</Text>
-            </TouchableOpacity>
-         </View>
-
          <FinancialSummaryDisplay
              monthlySummary={monthlySummary}
              weeklySummary={weeklySummary}
@@ -337,23 +357,13 @@ export default function HomeScreen() {
          />
 
         <View style={styles.transactionFiltersContainer}>
-            <Text style={styles.filterSectionTitle}>Transações Recentes</Text>
-            <View style={styles.typeFilterContainer}>
-                 <TouchableOpacity
-                    style={[styles.typeFilterButton, styles.typeFilterButtonLeft, transactionTypeFilter === 'all' && styles.typeFilterButtonActive]}
-                    onPress={() => setTransactionTypeFilter('all')}>
-                    <Text style={[styles.typeFilterButtonText, transactionTypeFilter === 'all' && styles.typeFilterButtonTextActive]}>Todas</Text>
-                 </TouchableOpacity>
-                 <TouchableOpacity
-                     style={[styles.typeFilterButton, transactionTypeFilter === 'income' && styles.typeFilterButtonActive]}
-                     onPress={() => setTransactionTypeFilter('income')}>
-                     <Text style={[styles.typeFilterButtonText, transactionTypeFilter === 'income' && styles.typeFilterButtonTextActive]}>Entradas</Text>
-                 </TouchableOpacity>
-                 <TouchableOpacity
-                     style={[styles.typeFilterButton, styles.typeFilterButtonRight, transactionTypeFilter === 'expense' && styles.typeFilterButtonActive]}
-                     onPress={() => setTransactionTypeFilter('expense')}>
-                     <Text style={[styles.typeFilterButtonText, transactionTypeFilter === 'expense' && styles.typeFilterButtonTextActive]}>Saídas</Text>
-                 </TouchableOpacity>
+            <Text style={styles.filterSectionTitle}>
+              Transações recentes
+            </Text>
+            <View style={styles.singleFilterLine}>
+                <TouchableOpacity style={[styles.cycleFilterButton, { backgroundColor: valueColor + '20'}]} onPress={handleCycleTransactionTypeFilter}>
+                    <Ionicons name={typeFilterIcon} size={18} color={valueColor} />
+                </TouchableOpacity>
             </View>
         </View>
 
@@ -365,12 +375,8 @@ export default function HomeScreen() {
                  transactions={filteredTransactions}
                  isLoading={isLoadingTransactions || isRefreshing}
                  onTransactionPress={handleTransactionPress}
-                 limit={2}
+                 limit={4}
              />
-              <TouchableOpacity style={styles.viewAllButton} onPress={navigateToAllTransactions}>
-                  <Text style={styles.viewAllButtonText}>Ver Histórico Completo</Text>
-                  <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-              </TouchableOpacity>
            </>
         )}
       </ScrollView>
@@ -396,39 +402,57 @@ export default function HomeScreen() {
 }
 
 const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: colors.bottomSheet,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: 15,
+  },
+  summaryText: {
+    fontSize: 14, 
+    color: colors.textPrimary,
+    paddingVertical: 5,
+    paddingHorizontal: 22,
+    fontWeight: '600', 
+  },
+  summaryTextActive: {
+    borderBottomColor: colors.secondary,
+    borderBottomWidth: 3,
+    paddingHorizontal: 22,
+    fontWeight: 'bold',
+  },
   container: { flex: 1, backgroundColor: colors.background },
   scrollContainer: { flex: 1 },
   centered: { justifyContent: 'center', alignItems: 'center', padding: 20, flex: 1 },
   groupLoadingIndicator: { marginTop: 50, marginBottom: 20 },
   errorText: { textAlign: 'center', fontSize: 16, lineHeight: 22 },
-  
-  summaryToggleContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 15, marginTop: 10 },
-  toggleButton: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 6, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface, marginHorizontal: 5 },
-  toggleButtonActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  toggleButtonText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
-  toggleButtonTextActive: { color: '#FFFFFF' },
 
-  transactionFiltersContainer: { paddingHorizontal: 15, marginTop: 15, marginBottom: 10, borderTopWidth: 1, borderTopColor: colors.border + '80', paddingTop: 15 },
-  filterSectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 15 },
-  typeFilterContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 15, backgroundColor: colors.surface, borderRadius: 8, overflow: 'hidden' },
-  typeFilterButton: { flex: 1, paddingVertical: 10, alignItems: 'center' },
-  typeFilterButtonLeft: { borderLeftWidth: 0 }, 
-  typeFilterButtonRight: { borderRightWidth: 0 }, 
-  typeFilterButtonActive: { backgroundColor: colors.primary },
-  typeFilterButtonText: { fontSize: 14, fontWeight: '500', color: colors.primary },
-  typeFilterButtonTextActive: { color: '#FFFFFF', fontWeight: 'bold' },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 15 },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, height: 40, fontSize: 15, color: colors.textPrimary },
-  clearButton: { padding: 5 },
-  filterContainer: { marginBottom: 5 },
-  filterChips: { flexDirection: 'row', alignItems: 'center', paddingBottom: 5 }, 
-  chip: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 15, marginRight: 8, borderWidth: 1 },
-  chipIdle: { backgroundColor: colors.surface, borderColor: colors.border },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 12 },
-  chipTextIdle: { color: colors.textSecondary },
-  chipTextSelected: { color: '#FFFFFF', fontWeight: 'bold' },
-  viewAllButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginHorizontal: 15, marginTop: 10, marginBottom: 20 },
-  viewAllButtonText: { color: colors.primary, fontSize: 15, fontWeight: '500', marginRight: 5 },
+  transactionFiltersContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, marginTop: 15, marginBottom: 10, borderTopWidth: 1, borderTopColor: colors.border + '80', paddingTop: 15 },
+  filterSectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary},
+  
+  singleFilterLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cycleFilterButton: {
+    padding: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cycleFilterButtonText: {
+     fontSize: 13,
+     fontWeight: '500',
+     color: colors.primary,
+  },
+  
+  viewAllButton: {
+    paddingHorizontal: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 });

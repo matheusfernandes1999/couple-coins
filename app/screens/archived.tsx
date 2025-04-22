@@ -1,13 +1,14 @@
 // app/shopping/archived.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
-import { Stack, useNavigation } from 'expo-router'; // Importa Stack
-import { useTheme } from '../../context/ThemeContext';
-import { useGroup } from '../../context/GroupContext';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Stack, useNavigation } from 'expo-router';
+import { useTheme } from '@/context/ThemeContext';
+import { useGroup } from '@/context/GroupContext';
 import { Ionicons } from '@expo/vector-icons';
-import { db } from '../../lib/firebase';
-import { collection, query, onSnapshot, orderBy, where, doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { collection, query, onSnapshot, where, doc, updateDoc } from 'firebase/firestore';
 import { ShoppingList } from '@/types';
+import { showMessage } from 'react-native-flash-message';
 
 export default function ArchivedShoppingListsScreen() {
   const { colors } = useTheme();
@@ -48,7 +49,12 @@ export default function ArchivedShoppingListsScreen() {
       setIsLoading(false);
     }, (error) => {
       console.error("ArchivedScreen: Error listening to archived lists:", error);
-      Alert.alert("Erro", "Não foi possível carregar as listas arquivadas.");
+      showMessage({
+        message: "Ops!",
+        description: "Não foi possível carregar as listas arquivadas.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
       setIsLoading(false);
     });
 
@@ -65,11 +71,19 @@ export default function ArchivedShoppingListsScreen() {
       try {
           await updateDoc(listDocRef, { archived: false }); // Define archived como false
           console.log(`List ${listId} unarchived`);
-          // A lista sumirá daqui automaticamente devido ao filtro 'where'
-          Alert.alert("Sucesso", "Lista desarquivada!"); // Feedback
+          showMessage({
+                message: "Lista desarquivada!",
+                backgroundColor: colors.success,
+                color: colors.textPrimary,
+              });
       } catch (error) {
           console.error("Error unarchiving list:", error);
-          Alert.alert("Erro", "Não foi possível desarquivar a lista.");
+          showMessage({
+            message: "Ops!",
+            description: "Não foi possível desarquivar a lista.",
+            backgroundColor: colors.error,
+            color: colors.textPrimary,
+          });
       }
    };
 

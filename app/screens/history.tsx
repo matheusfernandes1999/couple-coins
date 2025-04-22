@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Platform,
-  Alert,
   RefreshControl,
   TextInput,
   ScrollView,
@@ -35,6 +34,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import AddTransactionModal from "@/components/dashboard/AddTransactionModal";
 import TransactionDetailModal from "@/components/dashboard/TransactionDetailModal";
+import { showMessage } from "react-native-flash-message";
 
 const getMonthBounds = (
   year: number,
@@ -224,7 +224,12 @@ export default function HistoryScreen() {
     setShowStartDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       if (endDate && selectedDate > endDate) {
-        Alert.alert("Data Inválida", "Início > Fim.");
+        showMessage({
+          message: "Ops!",
+          description: "Data de início não pode ser maior que a data de fim.",
+          backgroundColor: colors.error,
+          color: colors.textPrimary,
+        });
         return;
       }
       const startOfDay = new Date(selectedDate);
@@ -240,7 +245,12 @@ export default function HistoryScreen() {
     setShowEndDatePicker(Platform.OS === "ios");
     if (selectedDate) {
       if (startDate && selectedDate < startDate) {
-        Alert.alert("Data Inválida", "Fim < Início.");
+        showMessage({
+          message: "Ops!",
+          description: "Data de fim não pode ser menor que a data de início.",
+          backgroundColor: colors.error,
+          color: colors.textPrimary,
+        });
         return;
       }
       const endOfDay = new Date(selectedDate);
@@ -318,10 +328,20 @@ export default function HistoryScreen() {
     try {
       await deleteDoc(docRef);
       handleCloseDetailModal();
-      Alert.alert("Sucesso", "Excluído.");
+      showMessage({
+        message: "Deu certo!",
+        description: "Transação excluída.",
+        backgroundColor: colors.success,
+        color: colors.textPrimary,
+      });
       setTransactions((p) => p.filter((t) => t.id !== transactionId));
     } catch (e) {
-      Alert.alert("Erro", "Falha ao excluir.");
+      showMessage({
+        message: "Ops!",
+        description: "Não foi possível excluir a transação.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
       console.error(e);
     }
   };
@@ -332,6 +352,11 @@ export default function HistoryScreen() {
       return;
     }
     setIsRefreshing(true);
+    showMessage({
+      message: "Atualizando...",
+      backgroundColor: colors.bottomSheet,
+      color: colors.textPrimary,
+    });
     setError(null);
     try {
       await fetchTransactions();
@@ -387,7 +412,7 @@ export default function HistoryScreen() {
                     : styles.chipTextIdle,
                 ]}
               >
-                Todas.
+                Todas
               </Text>
             </TouchableOpacity>
             {availableCategories
@@ -479,6 +504,7 @@ export default function HistoryScreen() {
                             </View>
                         ) : (
                             <View style={styles.rangeSelector}>
+                                <Text style={styles.dateSeparator}>de</Text>
                                 <TouchableOpacity style={styles.dateButton} onPress={() => setShowStartDatePicker(true)}>
                                     <Text style={styles.dateButtonText}>{startDate.toLocaleDateString('pt-BR')}</Text>
                                     <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />

@@ -1,9 +1,9 @@
 // components/dashboard/FinancialSummary.tsx
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
-import SummaryCard from './SummaryCard'; // Importa o card
-import { FinancialSummary } from '@/types'; // Ajuste o caminho!
+import { View, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
+import SummaryCard from './SummaryCard';
+import { FinancialSummary } from '@/types';
 
 interface FinancialSummaryProps {
   monthlySummary: FinancialSummary;
@@ -28,18 +28,18 @@ const FinancialSummaryDisplay: React.FC<FinancialSummaryProps> = ({
         <View style={styles.summarySection}>
           <View style={styles.summaryRow}>
             <SummaryCard
-              label="Entradas Mês" value={monthlySummary.income}
+              label="Entradas" value={monthlySummary.income}
               iconName="arrow-up-circle-outline" iconColor={colors.success}
               valueColor={colors.success} style={styles.cardHalf}
             />
             <SummaryCard
-              label="Saídas Mês" value={monthlySummary.expenses}
+              label="Saídas" value={monthlySummary.expenses}
               iconName="arrow-down-circle-outline" iconColor={colors.error}
               valueColor={colors.error} style={styles.cardHalf}
             />
           </View>
           <SummaryCard
-            label="Balanço Mensal" value={monthlySummary.balance}
+            label="Balanço" value={monthlySummary.balance}
             iconName="wallet-outline" iconColor={colors.primary}
             valueColor={getBalanceColor(monthlySummary.balance)} style={styles.cardFull}
           />
@@ -50,17 +50,17 @@ const FinancialSummaryDisplay: React.FC<FinancialSummaryProps> = ({
         <View style={styles.summarySection}>
             <View style={styles.summaryRow}>
                <SummaryCard
-                 label="Entradas Semana" value={weeklySummary.income}
+                 label="Entradas" value={weeklySummary.income}
                  iconName="arrow-up-circle-outline" iconColor={colors.success}
                  valueColor={colors.success} style={styles.cardThird}
                />
                <SummaryCard
-                 label="Saídas Semana" value={weeklySummary.expenses}
+                 label="Saídas" value={weeklySummary.expenses}
                  iconName="arrow-down-circle-outline" iconColor={colors.error}
                  valueColor={colors.error} style={styles.cardThird}
                />
                <SummaryCard
-                 label="Balanço Semana" value={weeklySummary.balance}
+                 label="Balanço" value={weeklySummary.balance}
                  iconName="wallet-outline" iconColor={colors.primary}
                  valueColor={getBalanceColor(weeklySummary.balance)} style={styles.cardThird}
                />

@@ -8,16 +8,16 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   ScrollView,
   Platform
 } from 'react-native';
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
+import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { Timestamp, addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase'; // Ajuste o caminho
+import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../../lib/firebase';
 import { ShoppingListItemData } from '@/types';
+import { showMessage } from 'react-native-flash-message';
 
 interface AddShoppingItemModalProps {
   isVisible: boolean;
@@ -32,36 +32,28 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
   const styles = getStyles(colors);
   const currentUser = auth.currentUser;
 
-  // Flag para modo de edição
   const isEditing = !!itemToEdit;
 
-  // --- Estados do Formulário ---
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('un');
   const [store, setStore] = useState('');
-  const [estimatedValue, setEstimatedValue] = useState(''); // Valor como string
-  const [category, setCategory] = useState('Compras'); // Categoria padrão
+  const [estimatedValue, setEstimatedValue] = useState('');
+  const [category, setCategory] = useState('Compras');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // -----------------------------
-
-  // Reseta o formulário quando o modal é fechado ou aberto
+  
   useEffect(() => {
     if (isVisible) {
       if (isEditing && itemToEdit) {
-        // Modo Edição: Preenche com dados existentes
-        console.log("Modal opened for editing item:", itemToEdit.id);
         setName(itemToEdit.name);
         setQuantity(itemToEdit.quantity.toString());
         setUnit(itemToEdit.unit);
         setStore(itemToEdit.store || '');
-        setEstimatedValue(itemToEdit.estimatedValue?.toString().replace('.', ',') || ''); // Formata se existir
+        setEstimatedValue(itemToEdit.estimatedValue?.toString().replace('.', ',') || '');
         setCategory(itemToEdit.category || 'Compras');
         setErrorMessage(null);
       } else {
-        // Modo Adicionar: Reseta tudo
-        console.log("Modal opened for adding new item");
         setName('');
         setQuantity('1');
         setUnit('un');
@@ -70,21 +62,30 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
         setCategory('Compras');
         setErrorMessage(null);
       }
-      setIsLoading(false); // Garante que loading não persista
+      setIsLoading(false);
     }
   }, [isVisible, itemToEdit, isEditing]);
 
-  // --- Handler para Salvar (Adicionar ou Editar) ---
   const handleSaveItem = async () => {
-    // Validações essenciais
-    if (!currentUser || !groupId || !listId) { /* ... */ return; }
-    if (!name.trim()) { /* ... */ return; }
+    if (!currentUser || !groupId || !listId) {
+        setErrorMessage("Erro: Informações de usuário, grupo ou lista ausentes.");
+        console.error("Missing data:", {currentUser: !!currentUser, groupId, listId});
+        return;
+      }
+      
+    if (!name.trim()) {
+        setErrorMessage("Digite o nome do item.");
+        return;
+      }
+
     const numQuantity = parseInt(quantity, 10);
-    if (isNaN(numQuantity) || numQuantity <= 0) { /* ... */ return; }
+    if (isNaN(numQuantity) || numQuantity <= 0) {
+        setErrorMessage("Digite uma quantidade numérica válida maior que zero.");
+        return;
+    }
 
     let validEstimatedValue: number | undefined = undefined;
-    if (estimatedValue.trim()) { /* ... validação como antes ... */ }
-    // ... (resto das validações como antes) ...
+
     if (estimatedValue.trim() && (isNaN(parseFloat(estimatedValue.replace(',', '.'))) || parseFloat(estimatedValue.replace(',', '.')) < 0)) {
         setErrorMessage("Digite um valor estimado numérico válido (ou deixe em branco).");
         return;
@@ -96,13 +97,11 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
     const categoryValue = category.trim() || 'Compras';
     const unitValue = unit.trim() || 'un';
 
-    // Prepara dados comuns
     const itemCommonData: any = {
         name: name.trim(),
         quantity: numQuantity,
         unit: unitValue,
         category: categoryValue,
-        // Store e EstimatedValue são adicionados condicionalmente
     };
     if (storeValue) itemCommonData.store = storeValue;
     if (validEstimatedValue !== undefined) itemCommonData.estimatedValue = validEstimatedValue;
@@ -112,17 +111,18 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
 
     try {
         if (isEditing && itemToEdit) {
-            // --- ATUALIZAR Item Existente ---
             console.log("Updating shopping item:", itemToEdit.id);
             const itemDocRef = doc(db, "groups", groupId, "shoppingLists", listId, "items", itemToEdit.id);
-            // Adiciona apenas os campos que foram atualizados
-            // Não atualiza addedBy, addedAt, isBought, etc. aqui
             await updateDoc(itemDocRef, itemCommonData);
-            console.log("Item updated successfully!");
+            showMessage({
+                message: "Deu certo!",
+                description: "Item atualizado com sucesso!",
+                backgroundColor: colors.success,
+                color: colors.textPrimary,
+            });
         } else {
-            // --- CRIAR Novo Item ---
             const newItemData = {
-                ...itemCommonData, // Inclui campos comuns
+                ...itemCommonData, 
                 addedBy: currentUser.uid,
                 addedAt: serverTimestamp(),
                 isBought: false,
@@ -130,121 +130,41 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
                 boughtBy: null,
                 linkedTransactionId: null,
             };
-            console.log("Adding shopping item:", newItemData);
             const collectionPath = collection(db, "groups", groupId, "shoppingLists", listId, "items");
             await addDoc(collectionPath, newItemData);
-            console.log("Shopping item added successfully!");
+            showMessage({
+                message: "Deu certo!",
+                description: "Item adicionado com sucesso!",
+                backgroundColor: colors.success,
+                color: colors.textPrimary,
+            });
         }
-        onClose(); // Fecha modal no sucesso
+        onClose();
 
     } catch (error: any) {
-        console.error("Error saving shopping item:", error);
         setErrorMessage(`Erro ao ${isEditing ? 'atualizar' : 'adicionar'} item.`);
-        if (error.code === 'permission-denied') { /* ... */ }
+        if (error.code === 'permission-denied') {
+            setErrorMessage("Você não tem permissão para adicionar itens a esta lista.");
+        }
     } finally {
         setIsLoading(false);
     }
   };  
 
-  // --- Handler para Adicionar Item ---
-  const handleAddItem = async () => {
-    // Verifica se todas as informações necessárias estão presentes
-    if (!currentUser || !groupId || !listId) {
-      setErrorMessage("Erro: Informações de usuário, grupo ou lista ausentes.");
-      console.error("Missing data:", {currentUser: !!currentUser, groupId, listId});
-      return;
-    }
-    // Validações básicas dos inputs
-    if (!name.trim()) {
-      setErrorMessage("Digite o nome do item.");
-      return;
-    }
-    const numQuantity = parseInt(quantity, 10);
-    if (isNaN(numQuantity) || numQuantity <= 0) {
-        setErrorMessage("Digite uma quantidade numérica válida maior que zero.");
-        return;
-    }
-
-    let validEstimatedValue: number | undefined = undefined;
-    if (estimatedValue.trim()) {
-        const parsedValue = parseFloat(estimatedValue.replace(',', '.'));
-        if (!isNaN(parsedValue) && parsedValue >= 0) {
-            validEstimatedValue = parsedValue;
-        } else {
-            setErrorMessage("O Valor Estimado deve ser um número válido (ex: 10,50) ou deixado em branco.");
-            return;
-        }
-    }
-
-    const storeValue = store.trim(); // Pega o valor limpo
-    const categoryValue = category.trim() || 'Compras'; // Pega categoria ou default
-    const unitValue = unit.trim() || 'un'; // Pega unidade ou default
-
-    // Cria o objeto base SEM os campos opcionais inicialmente
-    const newItemData: any = { // Usar 'any' ou Omit<> type
-      name: name.trim(),
-      quantity: numQuantity,
-      unit: unitValue,
-      // store: é adicionado abaixo se existir
-      category: categoryValue,
-      // estimatedValue: é adicionado abaixo se existir
-      addedBy: currentUser.uid,
-      addedAt: serverTimestamp(),
-      isBought: false,
-      boughtAt: null,
-      boughtBy: null,
-      linkedTransactionId: null, // Inicializa como null
-    };
-
-    // Adiciona 'store' APENAS se tiver algum valor
-    if (storeValue) {
-      newItemData.store = storeValue;
-    }
-
-    // Adiciona 'estimatedValue' APENAS se for um número válido
-    if (validEstimatedValue !== undefined) {
-      newItemData.estimatedValue = validEstimatedValue;
-    }
-
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      console.log("Adding shopping item:", newItemData);
-      const collectionPath = collection(db, "groups", groupId, "shoppingLists", listId, "items");
-      await addDoc(collectionPath, newItemData);
-
-      console.log("Shopping item added successfully!");
-      onClose();
-    } catch (error: any) {
-      console.error("Error adding shopping item:", error);
-      setErrorMessage("Erro ao salvar item. Verifique sua conexão ou permissões.");
-      if (error.code === 'permission-denied') {
-        setErrorMessage("Erro: Permissão negada para salvar o item nesta lista.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // --- UI do Modal ---
   return (
     <Modal
-      animationType="slide" // Animação de baixo para cima
-      transparent={true}     // Fundo transparente para ver overlay
-      visible={isVisible}    // Controla visibilidade
-      onRequestClose={onClose} // Permite fechar com botão "Voltar" do Android
+      animationType="slide"
+      transparent={true}
+      visible={isVisible}    
+      onRequestClose={onClose} 
     >
       <KeyboardAvoidingView
-         behavior={Platform.OS === "ios" ? "padding" : "height"} // Ajusta para teclado
+         behavior={Platform.OS === "ios" ? "padding" : "height"}
          style={styles.keyboardAvoidingView}
       >
-         {/* Overlay escurecido */}
          <View style={styles.modalOverlay}>
-            {/* Container principal do modal */}
             <View style={styles.modalContainer}>
                 <ScrollView>
-                    {/* Cabeçalho com Título e Botão Fechar */}
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>{isEditing ? 'Editar Item' : 'Adicionar Item'}</Text>
                         <TouchableOpacity onPress={onClose} disabled={isLoading}>
@@ -252,7 +172,6 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
                         </TouchableOpacity>
                     </View>
 
-                    {/* Campo: Nome do Item */}
                     <Text style={styles.label}>Nome do Item*</Text>
                     <TextInput
                         style={styles.input}
@@ -260,10 +179,9 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
                         onChangeText={setName}
                         placeholder="Ex: Leite Integral"
                         placeholderTextColor={colors.placeholder}
-                        editable={!isLoading} // Desabilita durante o loading
+                        editable={!isLoading}
                     />
 
-                    {/* Linha: Quantidade e Unidade */}
                     <View style={styles.row}>
                         <View style={styles.column}>
                             <Text style={styles.label}>Qtde*</Text>
@@ -271,7 +189,7 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
                                 style={styles.input}
                                 value={quantity}
                                 onChangeText={setQuantity}
-                                keyboardType="number-pad" // Teclado numérico
+                                keyboardType="number-pad"
                                 placeholder="1"
                                 placeholderTextColor={colors.placeholder}
                                 editable={!isLoading}
@@ -283,15 +201,14 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
                                 style={styles.input}
                                 value={unit}
                                 onChangeText={setUnit}
-                                placeholder="un, kg, L, pct" // Exemplos
+                                placeholder="un, kg, L, pct"
                                 placeholderTextColor={colors.placeholder}
-                                autoCapitalize="none" // Evita capitalização automática
+                                autoCapitalize="none"
                                 editable={!isLoading}
                             />
                         </View>
                     </View>
 
-                    {/* Linha: Valor Estimado e Categoria */}
                     <View style={styles.row}>
                          <View style={styles.column}>
                             <Text style={styles.label}>Valor Est. (R$)</Text>
@@ -299,7 +216,7 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
                                 style={styles.input}
                                 value={estimatedValue}
                                 onChangeText={setEstimatedValue}
-                                keyboardType="numeric" // Permite decimais
+                                keyboardType="numeric"
                                 placeholder="Opcional"
                                 placeholderTextColor={colors.placeholder}
                                 editable={!isLoading}
@@ -311,14 +228,13 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
                                 style={styles.input}
                                 value={category}
                                 onChangeText={setCategory}
-                                placeholder="Compras" // Default
+                                placeholder="Compras" 
                                 placeholderTextColor={colors.placeholder}
                                 editable={!isLoading}
                             />
                         </View>
                     </View>
 
-                    {/* Campo: Onde Comprar */}
                     <Text style={styles.label}>Onde Comprar (Opcional)</Text>
                     <TextInput
                         style={styles.input}
@@ -329,16 +245,13 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
                         editable={!isLoading}
                     />
 
-
-                    {/* Exibição de Mensagem de Erro */}
                     {errorMessage && (
                         <Text style={styles.errorMessage}>{errorMessage}</Text>
                     )}
 
-                    {/* Botão Salvar */}
                     <TouchableOpacity
                         style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-                        onPress={handleSaveItem} // Renomeado
+                        onPress={handleSaveItem}
                         disabled={isLoading}
                     >
                         {isLoading
@@ -354,28 +267,27 @@ const AddShoppingItemModal: React.FC<AddShoppingItemModalProps> = ({ isVisible, 
   );
 };
 
-// --- Estilos ---
 const getStyles = (colors: any) => StyleSheet.create({
     keyboardAvoidingView: {
-        flex: 1, // Ocupa toda a tela para o KAV funcionar bem
+        flex: 1, 
     },
     modalOverlay: {
-        flex: 1, // Ocupa todo o espaço do KAV
-        justifyContent: 'flex-end', // Alinha o modal na parte inferior
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fundo semi-transparente
+        flex: 1, 
+        justifyContent: 'flex-end', 
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', 
     },
     modalContainer: {
-        backgroundColor: colors.bottomSheet, // Cor de fundo do tema
-        borderTopLeftRadius: 20, // Bordas arredondadas no topo
+        backgroundColor: colors.bottomSheet, 
+        borderTopLeftRadius: 20, 
         borderTopRightRadius: 20,
-        padding: 20, // Espaçamento interno
-        paddingBottom: Platform.OS === 'ios' ? 40 : 30, // Padding extra inferior (considera safe area no iOS)
-        maxHeight: '90%', // Altura máxima para não ocupar tela inteira
-        shadowColor: '#000', // Sombra (iOS)
+        padding: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 30, 
+        maxHeight: '90%', 
+        shadowColor: '#000', 
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.25,
         shadowRadius: 4,
-        elevation: 5, // Sombra (Android)
+        elevation: 5, 
     },
     modalHeader: {
         flexDirection: 'row',
@@ -392,46 +304,46 @@ const getStyles = (colors: any) => StyleSheet.create({
         fontSize: 14,
         color: colors.textSecondary,
         marginBottom: 5,
-        marginTop: 10, // Espaço acima de cada label
+        marginTop: 10, 
     },
     input: {
-        backgroundColor: colors.surface, // Cor de fundo para inputs/cards
+        backgroundColor: colors.surface, 
         borderRadius: 8,
         paddingHorizontal: 15,
         paddingVertical: 12,
         fontSize: 16,
         color: colors.textPrimary,
         borderWidth: 1,
-        borderColor: colors.border, // Cor sutil de borda
-        marginBottom: 10, // Espaço abaixo de cada input
+        borderColor: colors.border,
+        marginBottom: 10, 
     },
     row: {
         flexDirection: 'row',
-        justifyContent: 'space-between', // Espaça as colunas
+        justifyContent: 'space-between', 
     },
     column: {
-        width: '48%', // Define largura para caber duas colunas com espaço
+        width: '48%', 
     },
     errorMessage: {
-        color: colors.error, // Cor de erro do tema
+        color: colors.error,
         textAlign: 'center',
         marginTop: 10,
         marginBottom: 5,
         fontSize: 14,
     },
     saveButton: {
-        backgroundColor: colors.primary, // Cor primária do tema
+        backgroundColor: colors.primary, 
         paddingVertical: 15,
         borderRadius: 8,
         alignItems: 'center',
-        marginTop: 20, // Espaço acima do botão
+        marginTop: 20, 
     },
     saveButtonDisabled: {
-        backgroundColor: colors.textSecondary, // Cor quando desabilitado
+        backgroundColor: colors.textSecondary, 
         opacity: 0.7,
     },
     saveButtonText: {
-        color: '#FFFFFF', // Texto branco no botão
+        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
     },

@@ -1,6 +1,6 @@
 // app/shopping/[listId].tsx
 import React, { useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useNavigation, Stack } from 'expo-router'; 
 import { useTheme } from '@/context/ThemeContext';         
 import { useGroup } from '@/context/GroupContext';         
@@ -16,16 +16,13 @@ import {
   writeBatch,
   getDocs,
   limit,
-  where,
-  FieldValue,
-  addDoc, 
-  updateDoc, 
-  deleteDoc 
+  where
 } from 'firebase/firestore';
 import { InventoryItemData, ShoppingListItemData } from '@/types'; 
 import ShoppingListItem from '@/components/dashboard/ShoppingListItem'; 
 import AddShoppingItemModal from '@/components/dashboard/AddShoppingItemModal';
 import AddTransactionFAB from '@/components/dashboard/AddTransactionFAB';     
+import { showMessage } from 'react-native-flash-message';
 
 export default function ListDetailScreen() {
   const { listId, name: listNameParam } = useLocalSearchParams<{ listId: string, name?: string }>();
@@ -102,7 +99,12 @@ export default function ListDetailScreen() {
     }, (error) => {
       // Tratamento de erro do listener
       console.error("ListDetail: Error listening to items:", error);
-      Alert.alert("Erro", "Não foi possível carregar os itens da lista.");
+      showMessage({
+        message: "Ops!",
+        description: "Não foi possível carregar os itens da lista.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
       setIsLoading(false);
       setIsRefreshing(false);
     });
@@ -123,7 +125,12 @@ export default function ListDetailScreen() {
 const handleToggleBought = async (item: ShoppingListItemData) => {
   // Verifica dados essenciais que devem vir do escopo do componente (contexto, auth)
   if (!groupId || !listId || !currentUser) {
-    Alert.alert("Erro", "Informações de grupo, lista ou usuário ausentes para completar a ação.");
+    showMessage({
+      message: "Ops!",
+      description: "Não foi possível identificar o grupo ou a lista.",
+      backgroundColor: colors.error,
+      color: colors.textPrimary,
+    });
     return; // Interrompe a execução se faltar dados cruciais
   }
 
@@ -282,12 +289,14 @@ const handleToggleBought = async (item: ShoppingListItemData) => {
 
   } catch (error: any) {
     console.error("ListDetail: Error in batched write for toggling item/inventory/transaction:", error);
-    Alert.alert("Erro", "Não foi possível atualizar o item, inventário e/ou transação correspondente.");
-    // Nota: Em caso de erro no batch, nenhuma das operações é aplicada.
+    showMessage({
+      message: "Ops!",
+      description: "Não foi possível atualizar o item.",
+      backgroundColor: colors.error,
+      color: colors.textPrimary,
+    });
   }
-}; // --- Fim da função handleToggleBought ---
-  // ---------------------------------------------------------------------
-
+};
   const handleEditItem = (item: ShoppingListItemData) => {
     console.log("Editing item:", item.id);
     setEditingItem(item); // Define o item a ser editado
@@ -297,7 +306,12 @@ const handleToggleBought = async (item: ShoppingListItemData) => {
 // --- Handler para EXCLUIR Item (e transação vinculada) ---
   const handleDeleteItem = (itemToDelete: ShoppingListItemData) => {
       if (!groupId || !listId) {
-           Alert.alert("Erro", "Não foi possível identificar o grupo ou a lista.");
+           showMessage({
+            message: "Ops!",
+            description: "Não foi possível identificar o grupo ou a lista.",
+            backgroundColor: colors.error,
+            color: colors.textPrimary,
+          });
            return;
       };
 
@@ -320,13 +334,21 @@ const handleToggleBought = async (item: ShoppingListItemData) => {
       // 3. Commita o batch
       batch.commit()
           .then(() => {
-              console.log("Item and potentially linked transaction deleted successfully.");
-              Alert.alert("Sucesso", `"${itemToDelete.name}" foi excluído.`);
-              // O listener onSnapshot atualizará a lista na UI
+              showMessage({
+                message: "Deu certo!",
+                description: `"${itemToDelete.name}" foi excluído.`,
+                backgroundColor: colors.error,
+                color: colors.textPrimary,
+              });
           })
           .catch((error) => {
               console.error("Error deleting item/transaction batch:", error);
-              Alert.alert("Erro", "Não foi possível excluir o item.");
+              showMessage({
+                message: "Ops!",
+                description: "Não foi possível excluir o item.",
+                backgroundColor: colors.error,
+                color: colors.textPrimary,
+              });
           });
   };
 
@@ -346,8 +368,11 @@ const handleToggleBought = async (item: ShoppingListItemData) => {
 
   // --- Handler de Refresh ---
   const onRefresh = useCallback(() => {
-    // Apenas ativa o indicador. O listener onSnapshot cuidará de buscar os dados mais recentes.
-    console.log("ListDetail: Refresh triggered.");
+    showMessage({
+      message: "Atualizando...",
+      backgroundColor: colors.bottomSheet,
+      color: colors.textPrimary,
+    });
     setIsRefreshing(true);
     // O listener já definirá isRefreshing=false quando receber dados.
     // Adiciona um fallback caso o listener demore muito ou falhe silenciosamente.

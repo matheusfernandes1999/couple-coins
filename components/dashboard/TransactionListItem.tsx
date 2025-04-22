@@ -20,23 +20,20 @@ const TransactionListItem: React.FC<TransactionListItemProps> = ({ item, onPress
 
   return (
     <TouchableOpacity onPress={() => onPress(item)} style={styles.container} activeOpacity={0.7}>
-        {/* Ícone */}
         <View style={[styles.iconContainer, { backgroundColor: valueColor + '20'}]}>
-             <Ionicons name={iconName} size={24} color={valueColor} />
+          <Ionicons name={iconName} size={24} color={valueColor} />
         </View>
 
-        {/* Detalhes */}
         <View style={styles.detailsContainer}>
-            <Text style={styles.categoryText} numberOfLines={1}>{item.category}</Text>
-            {item.description ? <Text style={styles.descriptionText} numberOfLines={1}>{item.description}</Text> : null}
+          <Text style={styles.categoryText} numberOfLines={1}>{item.category}</Text>
+          {item.description ? <Text style={styles.descriptionText} numberOfLines={1}>{item.description}</Text> : null}
         </View>
 
-        {/* Valor e Data */}
         <View style={styles.amountContainer}>
-            <Text style={[styles.amountText, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
-                {valueSign} {item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </Text>
-             <Text style={styles.dateText}>{item.date.toDate().toLocaleDateString('pt-BR')}</Text>
+          <Text style={[styles.amountText, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
+            {valueSign} {item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </Text>
+          <Text style={styles.dateText}>{item.date.toDate().toLocaleDateString('pt-BR')}</Text>
         </View>
     </TouchableOpacity>
   );

@@ -1,81 +1,66 @@
 // app/(tabs)/shopping.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react'; // Adicionado useRef
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
-import { useGroup } from '../../context/GroupContext';   // Ajuste o caminho
+import React, { useState, useEffect, useRef } from 'react'; 
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { useGroup } from '@/context/GroupContext';   
 import { Ionicons } from '@expo/vector-icons';
-import { db } from '../../lib/firebase';           // Ajuste o caminho
-import { collection, query, onSnapshot, orderBy, where, doc, updateDoc, Unsubscribe } from 'firebase/firestore'; // Import Unsubscribe
-import { ShoppingList, ShoppingListItemData, ShoppingListSummary } from '@/types'; // Ajuste o caminho
-import AddShoppingListModal from '@/components/dashboard/AddShoppingListModal';     // Ajuste o caminho
-import AddTransactionFAB from '@/components/dashboard/AddTransactionFAB';         // Ajuste o caminho
+import { db } from '@/lib/firebase';           
+import { collection, query, onSnapshot, where, doc, updateDoc, Unsubscribe } from 'firebase/firestore'; 
+import { ShoppingList, ShoppingListItemData, ShoppingListSummary } from '@/types'; 
+import AddShoppingListModal from '@/components/dashboard/AddShoppingListModal';     
+import AddTransactionFAB from '@/components/dashboard/AddTransactionFAB';        
 import { useRouter } from 'expo-router';
+import { showMessage } from 'react-native-flash-message';
 
 export default function ShoppingScreen() {
   const { colors } = useTheme();
   const { groupId, isLoadingGroup } = useGroup();
   const router = useRouter();
 
-  // Estado para listas com resumos
   const [listsWithSummaries, setListsWithSummaries] = useState<ShoppingList[]>([]);
-  // Loading das listas e resumos (combinado para simplificar UI)
   const [isLoadingData, setIsLoadingData] = useState(true);
-  // Modal de adicionar lista
   const [isModalVisible, setIsModalVisible] = useState(false);
-  // Ref para armazenar funções de unsubscribe dos listeners de itens
-  const itemListenersRef = useRef<Record<string, Unsubscribe>>({}); // Guarda { listId: unsubscribeFn }
+  const itemListenersRef = useRef<Record<string, Unsubscribe>>({});
 
-  // --- Listener Principal para Listas Ativas ---
   useEffect(() => {
-    // Limpa listeners de itens anteriores ao (re)iniciar
     Object.values(itemListenersRef.current).forEach(unsub => unsub());
     itemListenersRef.current = {};
 
     if (!groupId) {
       setListsWithSummaries([]);
       setIsLoadingData(false);
-      return () => { // Garante cleanup se groupId ficar null
+      return () => { 
          Object.values(itemListenersRef.current).forEach(unsub => unsub());
          itemListenersRef.current = {};
       };
     }
 
-    // Inicia loading sempre que o grupo muda
     if (!isLoadingGroup) setIsLoadingData(true);
-    setListsWithSummaries([]); // Limpa ao trocar grupo
+    setListsWithSummaries([]); 
 
-    console.log("ShoppingScreen: Setting up ACTIVE lists listener for group:", groupId);
     const listsQuery = query(
       collection(db, "groups", groupId, "shoppingLists"),
       where("archived", "==", false),
     );
 
     const unsubscribeLists = onSnapshot(listsQuery, (querySnapshot) => {
-      const fetchedListsMap = new Map<string, ShoppingList>(); // Usa Map para fácil atualização
+      const fetchedListsMap = new Map<string, ShoppingList>();
       querySnapshot.forEach((doc) => {
         fetchedListsMap.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
       });
       const fetchedListIds = Array.from(fetchedListsMap.keys());
       console.log(`ShoppingScreen: Fetched ${fetchedListIds.length} active list IDs.`);
-      setIsLoadingData(false); // Termina loading DAS LISTAS
-
-      // Atualiza o estado principal das listas (inicialmente sem resumos)
-      // Isso garante que as listas apareçam rapidamente
+      setIsLoadingData(false); 
       setListsWithSummaries(Array.from(fetchedListsMap.values()));
-
-      // --- Gerencia Sub-listeners para Itens e Resumos ---
-      // Remove listeners de listas que não existem mais
       Object.keys(itemListenersRef.current).forEach(listId => {
           if (!fetchedListsMap.has(listId)) {
               console.log(`ShoppingScreen: Cleaning up item listener for removed list ${listId}`);
-              itemListenersRef.current[listId](); // Chama unsubscribe
-              delete itemListenersRef.current[listId]; // Remove da ref
+              itemListenersRef.current[listId](); 
+              delete itemListenersRef.current[listId]; 
           }
       });
 
-      // Cria listeners para novas listas ou atualiza existentes
       fetchedListIds.forEach(listId => {
-        // Só cria listener se não existir um ativo para essa lista
         if (!itemListenersRef.current[listId]) {
             console.log(`ShoppingScreen: Setting up item listener for list ${listId}`);
             const itemsQuery = query(collection(db, "groups", groupId, "shoppingLists", listId, "items"));
@@ -97,7 +82,6 @@ export default function ShoppingScreen() {
                 const percentage = totalItems > 0 ? Math.round((boughtCount / totalItems) * 100) : 0;
                 const summary: ShoppingListSummary = { percentageBought: percentage, totalEstimatedValue: totalValue };
 
-                // Atualiza o resumo APENAS para a lista específica no estado
                 setListsWithSummaries(currentLists =>
                     currentLists.map(currentList =>
                         currentList.id === listId ? { ...currentList, summary } : currentList
@@ -105,18 +89,15 @@ export default function ShoppingScreen() {
                 );
             }, (error) => {
                 console.error(`ShoppingScreen: Error listening to items in list ${listId}:`, error);
-                // Opcional: Limpar resumo ou mostrar erro na UI da lista específica
                  setListsWithSummaries(currentLists =>
                      currentLists.map(currentList =>
                          currentList.id === listId ? { ...currentList, summary: undefined } : currentList // Limpa resumo em caso de erro
                      )
                  );
             });
-            // Armazena a função de unsubscribe na Ref
             itemListenersRef.current[listId] = unsubscribeItem;
         }
       });
-      // -------------------------------------------------
 
     }, (error) => {
       console.error("ShoppingScreen: Error listening to lists:", error);
@@ -125,44 +106,46 @@ export default function ShoppingScreen() {
        itemListenersRef.current = {};
     });
 
-    // Função de limpeza principal: desinscreve do listener das listas E de todos os listeners de itens ativos
     return () => {
       console.log("ShoppingScreen: Cleaning up ALL listeners for group:", groupId);
       unsubscribeLists();
       Object.values(itemListenersRef.current).forEach(unsub => unsub());
       itemListenersRef.current = {};
     };
-  }, [groupId, isLoadingGroup]); // Dependências principais
-
-  // --- Handler para Arquivar/Desarquivar ---
+  }, [groupId, isLoadingGroup]); 
+  
   const handleArchiveToggle = async (listId: string, currentStatus: boolean) => {
     if (!groupId) return;
     const listDocRef = doc(db, "groups", groupId, "shoppingLists", listId);
     try {
       await updateDoc(listDocRef, { archived: !currentStatus });
-      console.log(`List ${listId} archive status set to ${!currentStatus}`);
-      // Feedback visual opcional (Toast)
+      showMessage({
+        message: "Sucesso!",
+        description: `Lista ${!currentStatus ? "desarquivada" : "arquivada"} com sucesso.`,
+        backgroundColor: colors.success,
+        color: colors.textPrimary,
+      });
     } catch (error) {
-      console.error("Error toggling archive status:", error);
-      Alert.alert("Erro", "Não foi possível arquivar/desarquivar a lista.");
+      showMessage({
+        message: "Ops!",
+        description: "Não foi possível arquivar/desarquivar a lista.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
     }
   };
 
-  // --- Handler Navegação para Detalhes ---
   const navigateToListDetail = (list: ShoppingList) => {
-    // Passa nome para evitar busca extra na tela de detalhe se desejar
     router.push({
-      pathname: "/screens/[listId]", // Ajuste se sua rota for diferente
+      pathname: "/screens/[listId]", 
       params: { listId: list.id, name: list.name }
     });
   };
 
-  // --- Handler Navegação para Arquivadas ---
   const navigateToArchived = () => {
-    router.push("/screens/archived"); // Ajuste se sua rota for diferente
+    router.push("/screens/archived"); 
   };
 
-  // --- Render Item da Lista de Listas ---
   const renderListItem = ({ item }: { item: ShoppingList }) => (
     <TouchableOpacity onPress={() => navigateToListDetail(item)} style={styles.listItem}>
       <View style={styles.listItemContent}>
@@ -170,9 +153,9 @@ export default function ShoppingScreen() {
         <View style={styles.listTextContainer}>
           <Text style={styles.listName} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.listSummary}>
-            {item.summary // Verifica se o resumo foi calculado
+            {item.summary 
               ? `${item.summary.percentageBought}% • Est. ${item.summary.totalEstimatedValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
-              : 'Carregando...' // Mostra enquanto calcula/espera listener
+              : 'Sem items' 
             }
           </Text>
         </View>
@@ -183,10 +166,8 @@ export default function ShoppingScreen() {
     </TouchableOpacity>
   );
 
-  // --- Renderização Principal ---
   const styles = getStyles(colors);
 
-  // Loading inicial geral
   if (isLoadingGroup || (isLoadingData && listsWithSummaries.length === 0)) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -195,7 +176,6 @@ export default function ShoppingScreen() {
     );
   }
 
-  // Sem grupo definido
   if (!groupId) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -206,17 +186,14 @@ export default function ShoppingScreen() {
     );
   }
 
-  // Tela principal
   return (
     <View style={styles.container}>
-      {/* Botão para ver arquivadas */}
       <TouchableOpacity style={styles.archivedButton} onPress={navigateToArchived}>
-        <Ionicons name="archive" size={18} color={colors.primary} />
+        <Ionicons name="archive" size={18} color={colors.secondary} />
         <Text style={styles.archivedButtonText}> Ver Listas Arquivadas</Text>
       </TouchableOpacity>
 
-      {/* Exibição das Listas Ativas */}
-      {listsWithSummaries.length === 0 && !isLoadingData ? ( // Mostra se terminou de carregar e está vazio
+      {listsWithSummaries.length === 0 && !isLoadingData ? (
         <View style={styles.centered}>
            <Ionicons name="cart-outline" size={60} color={colors.textSecondary} style={styles.icon}/>
            <Text style={styles.title}>Nenhuma Lista Ativa</Text>
@@ -228,24 +205,20 @@ export default function ShoppingScreen() {
           renderItem={renderListItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          // Não precisa mais do ListFooterComponent para loading de resumos aqui
         />
       )}
 
-      {/* FAB para adicionar NOVA LISTA */}
       <AddTransactionFAB onPress={() => setIsModalVisible(true)} />
 
-      {/* Modal para adicionar NOVA LISTA */}
       <AddShoppingListModal
         isVisible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
-        groupId={groupId} // Passa o ID do grupo atual
+        groupId={groupId} 
       />
     </View>
   );
 }
 
-// --- Estilos ---
 const getStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
@@ -261,5 +234,5 @@ const getStyles = (colors: any) => StyleSheet.create({
   listSummary: { fontSize: 13, color: colors.textSecondary },
   archiveButton: { padding: 5 },
   archivedButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginHorizontal: 15, marginBottom: 10, marginTop: 10 },
-  archivedButtonText: { color: colors.primary, fontSize: 15, fontWeight: '500', marginLeft: 5 },
+  archivedButtonText: { color: colors.secondary, fontSize: 15, fontWeight: '500', marginLeft: 5 },
 });

@@ -69,17 +69,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   useEffect(() => {
     if (isVisible) {
       if (isEditing && transactionToEdit) {
-        console.log(
-          "AddTransactionModal: Editing transaction -",
-          transactionToEdit.id
-        );
         setAmount(transactionToEdit.value.toString().replace(".", ","));
         setType(transactionToEdit.type);
         setCategory(transactionToEdit.category);
         setDate(transactionToEdit.date.toDate()); 
         setDescription(transactionToEdit.description || "");
       } else {
-        console.log("AddTransactionModal: Opened for adding new transaction");
         setAmount("");
         setType("expense");
         setCategory("");
@@ -94,10 +89,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   }, [isVisible, transactionToEdit, isEditing]);
 
-  // --- Efeito para Filtrar Sugestões de Categoria ---
   useEffect(() => {
     const currentInput = category.trim().toLowerCase();
-
     if (
       currentInput.length > 0 &&
       existingCategories &&
@@ -116,7 +109,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   }, [category, existingCategories]);
 
-  // --- Handler para Mudança de Data ---
   const handleDateChange = (
     event: DateTimePickerEvent,
     selectedDate?: Date
@@ -128,18 +120,15 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setDate(currentDate);
   };
 
-  // --- Handler para Selecionar Sugestão de Categoria ---
   const handleSelectSuggestion = (selectedCat: string) => {
     console.log("Suggestion selected:", selectedCat);
-    setCategory(selectedCat); // Define o input com a categoria clicada
-    setCategorySuggestions([]); // Limpa o array de sugestões
-    setShowSuggestions(false); // Esconde a lista de sugestões
-    Keyboard.dismiss(); // Fecha o teclado
+    setCategory(selectedCat);
+    setCategorySuggestions([]);
+    setShowSuggestions(false);
+    Keyboard.dismiss(); 
   };
 
-  // --- Handler para Salvar (Cria OU Atualiza Transação) ---
   const handleSaveTransaction = async () => {
-    // 1. Validações Essenciais
     if (!currentUser || !groupId) {
       setErrorMessage("Erro: Usuário ou grupo não identificado.");
       return;
@@ -156,7 +145,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       return;
     }
 
-    // 2. Validação Estrita da Categoria (Deve existir na lista passada)
     const isValidCategory = existingCategories.some(
       (c) => c.toLowerCase() === categoryToSave.toLowerCase()
     );
@@ -164,32 +152,26 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setErrorMessage(
         `Categoria "${categoryToSave}" inválida. Selecione uma existente ou adicione-a na tela de Perfil.`
       );
-      return; // Impede o salvamento
+      return;
     }
-    // Pega a grafia correta da categoria existente para salvar
     const finalCategoryName =
       existingCategories.find(
         (c) => c.toLowerCase() === categoryToSave.toLowerCase()
       ) || categoryToSave;
 
-    // 3. Prepara Dados Comuns (para Add e Update)
     const transactionCommonData = {
       value: numericAmount,
       type: type,
-      category: finalCategoryName, // Usa o nome com a grafia correta
+      category: finalCategoryName,
       description: description.trim(),
       date: Timestamp.fromDate(date),
     };
 
-    // 4. Inicia Processo de Salvar/Atualizar
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
       if (isEditing && transactionToEdit) {
-        // --- ATUALIZAR Transação Existente ---
-        console.log("Updating transaction:", transactionToEdit.id);
-        // Cria referência ao documento existente
         const transDocRef = doc(
           db,
           "groups",
@@ -197,40 +179,40 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           "transactions",
           transactionToEdit.id
         );
-        // Prepara dados para atualização (não inclui createdAt, userId original)
         const updateData = {
           ...transactionCommonData,
-          updatedAt: serverTimestamp(), // Adiciona timestamp de atualização
-          lastEditedBy: currentUser.uid, // Quem editou por último (opcional)
+          updatedAt: serverTimestamp(), 
+          lastEditedBy: currentUser.uid, 
         };
-        await updateDoc(transDocRef, updateData); // Executa a atualização
-        console.log("Transaction updated successfully!");
+        await updateDoc(transDocRef, updateData);
+        showMessage({
+          message: "Deu certo!",
+          description: "Transação atualizada com sucesso!",
+          backgroundColor: colors.success,
+          color: colors.textPrimary,
+        });
 
       } else {
-        // --- CRIAR Nova Transação ---
-        // Adiciona campos específicos da criação
         const newTransactionData = {
           ...transactionCommonData,
-          userId: currentUser.uid, // ID do usuário que criou
-          createdAt: serverTimestamp(), // Timestamp de criação
-          // groupId não precisa se for subcoleção
+          userId: currentUser.uid,
+          createdAt: serverTimestamp(),
         };
-        console.log("Adding transaction:", newTransactionData);
-        // Define o caminho da coleção (subcoleção de transactions dentro do grupo)
         const collectionPath = collection(
           db,
           "groups",
           groupId,
           "transactions"
         );
-        await addDoc(collectionPath, newTransactionData); // Adiciona o novo documento
-        console.log("Transaction added successfully!");
+        await addDoc(collectionPath, newTransactionData);
         showMessage({
           message: "Deu certo!",
-          description: "Transação registrada com sucesso!",
+          description: "Transação adicionada com sucesso!",
+          backgroundColor: colors.success,
+          color: colors.textPrimary,
         });
       }
-      onClose(); // Fecha o modal em caso de sucesso
+      onClose();
     } catch (error: any) {
       console.error("Error saving transaction:", error);
       setErrorMessage(
@@ -324,7 +306,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.label}>Valor (R$)*</Text>
+              <Text style={styles.label}>Valor (R$)</Text>
               <TextInput
                 style={styles.input}
                 placeholder="0,00"
@@ -335,7 +317,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 editable={!isLoading}
               />
 
-              <Text style={styles.label}>Categoria*</Text>
+              <Text style={styles.label}>Categoria</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Digite ou selecione uma categoria"
@@ -372,7 +354,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </View>
               )}
 
-              <Text style={styles.label}>Data*</Text>
+              <Text style={styles.label}>Data</Text>
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowDatePicker(true)}

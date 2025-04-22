@@ -9,10 +9,10 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { useTheme } from "../../context/ThemeContext"; // Ajuste o caminho
+import { useTheme } from "@/context/ThemeContext"; 
 import { Ionicons } from "@expo/vector-icons";
-import { InventoryItemData } from "@/types"; // Ajuste o caminho
-import { doc, getDoc, Timestamp } from "firebase/firestore"; // Para checagem de tipo
+import { InventoryItemData } from "@/types";
+import { doc, getDoc, Timestamp } from "firebase/firestore"; 
 import { db } from "@/lib/firebase";
 
 interface InventoryItemDetailModalProps {
@@ -21,7 +21,6 @@ interface InventoryItemDetailModalProps {
   item: InventoryItemData | null;
 }
 
-// Função auxiliar para formatar datas ou retornar 'N/A'
 const formatDate = (timestamp: Timestamp | null | undefined): string => {
   if (timestamp && typeof timestamp.toDate === "function") {
     return timestamp.toDate().toLocaleDateString("pt-BR", {
@@ -33,7 +32,6 @@ const formatDate = (timestamp: Timestamp | null | undefined): string => {
   return "N/A";
 };
 
-// Função auxiliar para formatar valores monetários ou retornar 'N/A'
 const formatCurrency = (value: number | null | undefined): string => {
   if (value !== undefined && value !== null) {
     return value.toLocaleString("pt-BR", {
@@ -51,25 +49,20 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  // --- Estados para Nomes Buscados ---
   const [addedByName, setAddedByName] = useState<string | null>(null);
   const [updatedByName, setUpdatedByName] = useState<string | null>(null);
   const [isLoadingNames, setIsLoadingNames] = useState(false);
-  // -----------------------------------
 
-  // --- Efeito para Buscar Nomes ---
   useEffect(() => {
-    // Função async interna para buscar os nomes
     const fetchUserNames = async () => {
-      if (!item) return; // Sai se não há item
+      if (!item) return;
 
-      setIsLoadingNames(true); // Inicia loading dos nomes
-      setAddedByName(null); // Reseta nomes anteriores
+      setIsLoadingNames(true); 
+      setAddedByName(null); 
       setUpdatedByName(null);
 
-      const promisesToFetch: Promise<void>[] = []; // Array para promises de busca
-
-      // 1. Busca nome de quem adicionou (addedBy)
+      const promisesToFetch: Promise<void>[] = [];
+      
       if (item.addedBy) {
         promisesToFetch.push(
           getDoc(doc(db, "users", item.addedBy))
@@ -78,24 +71,22 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
                 setAddedByName(
                   docSnap.data()?.displayName ||
                     `ID: ...${item.addedBy.slice(-5)}`
-                ); // Usa nome ou fallback ID
+                );
               } else {
                 setAddedByName(
                   `ID: ...${item.addedBy.slice(-5)} (não encontrado)`
-                ); // Fallback ID
+                );
               }
             })
             .catch((err) => {
               console.error("Erro buscando nome 'addedBy':", err);
-              setAddedByName(`ID: ...${item.addedBy.slice(-5)} (erro)`); // Fallback ID com erro
+              setAddedByName(`ID: ...${item.addedBy.slice(-5)} (erro)`); 
             })
         );
       } else {
-        setAddedByName("Desconhecido"); // Se não houver addedBy ID
+        setAddedByName("Desconhecido");
       }
 
-      // 2. Busca nome de quem atualizou por último (lastUpdatedBy)
-      // Só busca se existir E for diferente de quem adicionou (evita busca duplicada)
       if (item.lastUpdatedBy && item.lastUpdatedBy !== item.addedBy) {
         promisesToFetch.push(
           getDoc(doc(db, "users", item.lastUpdatedBy))
@@ -122,15 +113,11 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
         // Se for a mesma pessoa, reutiliza o nome já buscado (ou a buscar)
         // Não precisa de outra promise, mas definimos o estado após a primeira busca terminar
       } else {
-        setUpdatedByName("N/A"); // Se não houve atualização ainda
+        setUpdatedByName("N/A");
       }
 
-      // Espera todas as buscas terminarem
       await Promise.all(promisesToFetch);
-
-      // Se updatedBy era o mesmo que addedBy, copia o nome após a busca principal
       if (item?.lastUpdatedBy && item?.lastUpdatedBy === item?.addedBy) {
-        // Usa uma função no setState para garantir que está usando o valor mais recente de addedByName
         setUpdatedByName(
           (currentAddedName) =>
             currentAddedName ||
@@ -138,15 +125,13 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
         );
       }
 
-      setIsLoadingNames(false); // Finaliza loading dos nomes
+      setIsLoadingNames(false);
     };
 
-    // Chama a busca apenas se o modal estiver visível e tiver um item
     if (isVisible && item) {
       fetchUserNames();
     }
 
-    // Limpa nomes se modal fechar ou item mudar (antes de buscar novos)
     return () => {
       setAddedByName(null);
       setUpdatedByName(null);
@@ -155,18 +140,16 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
   }, [isVisible, item]);
 
   if (!item) {
-    return null; // Não renderiza se nenhum item for passado
+    return null; 
   }
 
-  // Formata dados para exibição
   const addedAtFormatted = formatDate(item.addedAt);
-  const updatedAtFormatted = formatDate(item.updatedAt); // Usa a função auxiliar
+  const updatedAtFormatted = formatDate(item.updatedAt); 
   const lastPurchaseDateFormatted = formatDate(item.lastPurchaseDate);
   const nextPurchaseDateFormatted = formatDate(item.nextPurchaseDate);
   const lastPurchaseValueFormatted = formatCurrency(item.lastPurchaseValue);
   const nextPurchaseValueFormatted = formatCurrency(item.nextPurchaseValue);
-  const lastPurchaseQuantityFormatted =
-    item.lastPurchaseQuantity !== null ? item.lastPurchaseQuantity : "N/A";
+  const lastPurchaseQuantityFormatted = item.lastPurchaseQuantity !== null ? item.lastPurchaseQuantity : "N/A";
 
   return (
     <Modal
@@ -178,7 +161,6 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
           <ScrollView>
-            {/* Cabeçalho */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {item.name || "Detalhes do Item"}
@@ -192,7 +174,6 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Detalhes do Inventário */}
             <View style={styles.detailSection}>
               <Text style={styles.sectionTitle}>Informações Atuais</Text>
               <View style={styles.detailRow}>
@@ -252,7 +233,6 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
               </View>
             </View>
 
-            {/* Detalhes da Última Compra */}
             <View style={styles.detailSection}>
               <Text style={styles.sectionTitle}>Última Compra Registrada</Text>
               <View style={styles.detailRow}>
@@ -275,7 +255,6 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
               </View>
             </View>
 
-            {/* Detalhes da Próxima Compra */}
             <View style={styles.detailSection}>
               <Text style={styles.sectionTitle}>
                 Planejamento Próxima Compra
@@ -300,7 +279,6 @@ const InventoryItemDetailModal: React.FC<InventoryItemDetailModalProps> = ({
   );
 };
 
-// Estilos (similares ao TransactionDetailModal, adaptados)
 const getStyles = (colors: any) =>
   StyleSheet.create({
     modalOverlay: {
@@ -312,7 +290,7 @@ const getStyles = (colors: any) =>
     modalContainer: {
       backgroundColor: colors.bottomSheet,
       borderRadius: 15,
-      padding: 20, // Padding interno
+      padding: 20, 
       width: "90%",
       maxHeight: "85%",
       shadowColor: "#000",
@@ -325,7 +303,7 @@ const getStyles = (colors: any) =>
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 15, // Espaço abaixo do header
+      marginBottom: 15,
       paddingBottom: 10,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
@@ -334,41 +312,40 @@ const getStyles = (colors: any) =>
       fontSize: 18,
       fontWeight: "bold",
       color: colors.textPrimary,
-      flexShrink: 1, // Permite encolher se nome for longo
+      flexShrink: 1,
       marginRight: 10,
     },
     detailSection: {
-      marginBottom: 15, // Espaço entre seções
+      marginBottom: 15, 
       paddingBottom: 10,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border + "50", // Linha divisória mais sutil
+      borderBottomColor: colors.border + "50", 
     },
     sectionTitle: {
       fontSize: 16,
-      fontWeight: "600", // Semi-bold
-      color: colors.primary, // Destaca título da seção
+      fontWeight: "600", 
+      color: colors.primary, 
       marginBottom: 12,
     },
     detailRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: 8, // Espaço menor entre linhas dentro da seção
-      alignItems: "center", // Alinha verticalmente
+      marginBottom: 8, 
+      alignItems: "center", 
     },
     detailLabel: {
       fontSize: 14,
       color: colors.textSecondary,
-      width: "40%", // Ajusta largura do label
+      width: "40%", 
     },
     detailValue: {
-      fontSize: 14, // Mesmo tamanho do label
+      fontSize: 14, 
       color: colors.textPrimary,
       flex: 1,
       textAlign: "right",
-      fontWeight: "500", // Leve destaque no valor
+      fontWeight: "500", 
     },
     quantityValue: {
-      // Estilo específico para quantidade
       fontWeight: "bold",
       fontSize: 15,
     },

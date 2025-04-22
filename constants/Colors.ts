@@ -12,6 +12,7 @@ type ColorTheme = {
   border: string;        // Cor de bordas sutis
   error: string;         // Cor para indicar erros
   success: string;       // Cor para indicar sucesso (pode ser a 'secondary')
+  warning: string;       // Cor para avisos (não definido no tema, mas pode ser útil)
   icon: string;          // Cor padrão para ícones
   placeholder: string;   // Cor específica para placeholders em inputs
 };
@@ -27,6 +28,7 @@ const lightColors: ColorTheme = {
   border: '#D1D1D6',        // Cinza claro para bordas
   error: '#FF3B30',         // Vermelho padrão iOS para erros
   success: '#34C759',       // Verde (mesmo que secundário)
+  warning: '#FF9500',       // Laranja para avisos (não definido no tema, mas pode ser útil)
   icon: '#8A8A8E',          // Cinza médio para ícones não interativos
   placeholder: '#C7C7CD',   // Cinza bem claro para placeholders
 };
@@ -42,6 +44,7 @@ const darkColors: ColorTheme = {
   border: '#38383A',        // Cinza escuro para bordas
   error: '#FF453A',         // Vermelho mais brilhante para erros
   success: '#30D158',       // Verde (mesmo que secundário)
+  warning: '#FF9F0A',       // Laranja para avisos (não definido no tema, mas pode ser útil)
   icon: '#8A8A8E',          // Cinza médio (funciona bem em ambos os temas)
   placeholder: '#636366',   // Cinza escuro para placeholders
 };

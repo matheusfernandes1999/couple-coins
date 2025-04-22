@@ -2,16 +2,17 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
-import { InventoryItemData } from '@/types';          // Ajuste o caminho
+import { useTheme } from '@/context/ThemeContext'; 
+import { InventoryItemData } from '@/types';          
+import ConfirmationModal from '../modal/ConfirmationModal';
 
 interface InventoryListItemProps {
   item: InventoryItemData;
   onUpdateQuantity: (itemId: string, newQuantity: number) => void;
   onAddToShoppingList: (item: InventoryItemData) => void;
-  onPress: () => void;      // Para abrir detalhes
-  onEdit: () => void;       // <-- Prop para Editar
-  onDelete: () => void;     // <-- Prop para Excluir
+  onPress: () => void;      
+  onEdit: () => void;      
+  onDelete: () => void;     
 }
 
 const InventoryListItem: React.FC<InventoryListItemProps> = ({
@@ -28,20 +29,17 @@ const InventoryListItem: React.FC<InventoryListItemProps> = ({
 
   const handleIncrease = () => onUpdateQuantity(item.id, item.quantity + 1);
   const handleDecrease = () => { if (item.quantity > 0) onUpdateQuantity(item.id, item.quantity - 1); };
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
 
-  // Confirmação antes de deletar
   const handleDeletePress = () => {
-      Alert.alert(
-          "Confirmar Exclusão",
-          `Deseja realmente excluir "${item.name}" do inventário?`,
-          [
-              { text: "Cancelar", style: "cancel" },
-              { text: "Excluir", style: "destructive", onPress: onDelete }
-          ]
-      );
+    setShowConfirmDeleteModal(true); 
   };
 
-  // Toggle para expandir/recolher o item
+  const confirmDelete = () => {
+      setShowConfirmDeleteModal(false);
+      onDelete();                     
+  };
+
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
   };
@@ -49,7 +47,6 @@ const InventoryListItem: React.FC<InventoryListItemProps> = ({
   return (
     <View style={styles.outerContainer}>
       <View style={styles.container}>
-          {/* Área Principal do Item */}
           <TouchableOpacity style={styles.detailsClickableArea} activeOpacity={0.7} onPress={toggleExpand}>
               <View style={styles.detailsContainer}>
                   <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
@@ -60,7 +57,6 @@ const InventoryListItem: React.FC<InventoryListItemProps> = ({
               </View>
           </TouchableOpacity>
 
-          {/* Controle de Quantidade */}
           <View style={styles.quantityContainer}>
               <TouchableOpacity onPress={handleDecrease} style={styles.quantityButton}>
                   <Ionicons name="remove-circle-outline" size={26} color={colors.error} />
@@ -71,7 +67,6 @@ const InventoryListItem: React.FC<InventoryListItemProps> = ({
               </TouchableOpacity>
           </View>
 
-          {/* Botão para expandir */}
           <TouchableOpacity style={styles.expandButton} onPress={toggleExpand}>
               <Ionicons 
                 name={isExpanded ? "chevron-up" : "chevron-down"} 
@@ -81,34 +76,40 @@ const InventoryListItem: React.FC<InventoryListItemProps> = ({
           </TouchableOpacity>
       </View>
 
-      {/* Ações expandidas (visíveis apenas quando expandido) */}
       {isExpanded && (
         <View style={styles.expandedActionsContainer}>
-          {/* Botão Ver Detalhes */}
           <TouchableOpacity style={styles.expandedActionButton} onPress={onPress}>
             <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
             <Text style={styles.actionButtonText}>Detalhes</Text>
           </TouchableOpacity>
 
-          {/* Botão Adicionar à Lista */}
           <TouchableOpacity style={styles.expandedActionButton} onPress={() => onAddToShoppingList(item)}>
             <Ionicons name="cart-outline" size={20} color={colors.primary} />
             <Text style={styles.actionButtonText}>Add à Lista</Text>
           </TouchableOpacity>
 
-          {/* Botão Editar */}
           <TouchableOpacity style={styles.expandedActionButton} onPress={onEdit}>
             <Ionicons name="pencil-outline" size={20} color={colors.textSecondary} />
             <Text style={styles.actionButtonText}>Editar</Text>
           </TouchableOpacity>
 
-          {/* Botão Excluir */}
           <TouchableOpacity style={styles.expandedActionButton} onPress={handleDeletePress}>
             <Ionicons name="trash-outline" size={20} color={colors.error} />
             <Text style={styles.actionButtonText}>Excluir</Text>
           </TouchableOpacity>
         </View>
       )}
+
+        <ConfirmationModal
+            isVisible={showConfirmDeleteModal}
+            onClose={() => setShowConfirmDeleteModal(false)} 
+            onConfirm={confirmDelete}
+            title="Confirmar Exclusão"
+            message={`Deseja realmente excluir "${item.name}" do inventário?`}
+            confirmButtonText="Excluir"
+            isDestructive={true} 
+        />
+
     </View>
   );
 };
@@ -133,7 +134,6 @@ const getStyles = (colors: any) => StyleSheet.create({
         marginRight: 8,
     },
     detailsContainer: {
-        // Estilos para o contêiner de detalhes
     },
     itemName: {
         fontSize: 16,

@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     StyleSheet,
     Share,
-    Alert,
     Keyboard,
     ActivityIndicator,
     Platform
@@ -17,6 +16,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useGroup } from '@/context/GroupContext';
 import { db } from '@/lib/firebase';        
 import { doc, updateDoc } from 'firebase/firestore';  
+import { showMessage } from 'react-native-flash-message';
 
 const GroupHeader: React.FC = () => {
   const { colors } = useTheme();
@@ -35,7 +35,11 @@ const GroupHeader: React.FC = () => {
 
   const handleSave = async () => {
     if (!groupId || !editingName.trim()) {
-      Alert.alert("Erro", "Nome inválido ou grupo não identificado.");
+      showMessage({
+        message: "Nome inválido ou grupo não identificado.",
+        backgroundColor: colors.warning,
+        color: colors.textPrimary,
+      });
       return;
     }
     setIsSaving(true);
@@ -44,10 +48,19 @@ const GroupHeader: React.FC = () => {
     try {
       await updateDoc(groupDocRef, { groupName: editingName.trim() });
       setIsEditing(false); 
-      // Alert.alert("Sucesso", "Nome atualizado!"); // Opcional: Feedback visual (Toast seria melhor)
+      showMessage({
+        message: "Nome atualizado com sucesso!",
+        backgroundColor: colors.success,
+        color: colors.textPrimary,
+      });
     } catch (e: any) {
       console.error("Error updating group name from GroupHeader:", e);
-      Alert.alert("Erro", "Falha ao atualizar o nome do grupo: " + e.message);
+      showMessage({
+        message: "Ops!",
+        description: "Falha ao atualizar o nome do grupo!",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -60,7 +73,11 @@ const GroupHeader: React.FC = () => {
 
   const handleShareCode = async () => {
     if (!groupData?.inviteCode) {
-        Alert.alert("Info", "Código de convite não disponível.");
+        showMessage({
+          message: "Código de convite não disponível!",
+          backgroundColor: colors.warning,
+          color: colors.textPrimary,
+        });
         return;
     }
     try {
@@ -69,7 +86,12 @@ const GroupHeader: React.FC = () => {
         title: 'Convite para Grupo Familiar'
       });
     } catch (error: any) {
-      Alert.alert("Erro", "Não foi possível compartilhar o código: " + error.message);
+      showMessage({
+          message: "Ops!",
+          description: "Não foi possível compartilhar o código!",
+          backgroundColor: colors.error,
+          color: colors.textPrimary,
+      });
     }
   };
 

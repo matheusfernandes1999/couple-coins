@@ -9,7 +9,7 @@ import React, {
     useMemo
   } from 'react';
   import { User, onAuthStateChanged } from 'firebase/auth';
-  import { doc, getDoc, onSnapshot, DocumentData } from 'firebase/firestore';
+  import { doc, getDoc, onSnapshot } from 'firebase/firestore';
   import { auth, db } from '../lib/firebase'; // Ajuste o caminho
   import { GroupData } from '@/types'; // Ajuste o caminho
   

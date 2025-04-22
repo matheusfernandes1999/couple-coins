@@ -2,7 +2,7 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext'; // Ajuste o caminho
+import { useTheme } from '../../context/ThemeContext';
 
 interface AddTransactionFABProps {
   onPress: () => void;
@@ -24,7 +24,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.secondary,
     width: 60,
     height: 60,
     borderRadius: 30,

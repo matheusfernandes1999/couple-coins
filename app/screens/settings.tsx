@@ -2,13 +2,14 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react'; // Adicionado useState, useEffect
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView,
-    TextInput, ActivityIndicator, Alert, Keyboard // Adicionado TextInput, ActivityIndicator, Alert, Keyboard
+    TextInput, ActivityIndicator, Keyboard // Adicionado TextInput, ActivityIndicator, Alert, Keyboard
 } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
-import { Stack, useNavigation } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '@/lib/firebase'; // Importar db e auth
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'; // Importar getDoc, setDoc, updateDoc
+import { doc, getDoc, setDoc } from 'firebase/firestore'; // Importar getDoc, setDoc, updateDoc
+import { showMessage } from 'react-native-flash-message';
 
 // Define o tipo para as opções de tema, incluindo ícone
 type ThemeOption = {
@@ -72,12 +73,22 @@ export default function SettingsScreen() {
     // --- Handler para Salvar Nome ---
     const handleSaveName = async () => {
         if (!auth.currentUser) {
-            Alert.alert("Erro", "Usuário não autenticado.");
+            showMessage({
+                message: "Ops!",
+                description: "Você não está autenticado.",
+                backgroundColor: colors.error,
+                color: colors.textPrimary,
+            });
             return;
         }
         const trimmedName = nameInput.trim();
         if (!trimmedName) {
-            Alert.alert("Erro", "Por favor, digite um nome.");
+            showMessage({
+                message: "Ops!",
+                description: "Por favor, digite um nome.",
+                backgroundColor: colors.warning,
+                color: colors.textPrimary,
+            });
             return;
         }
 
@@ -88,10 +99,20 @@ export default function SettingsScreen() {
         try {
             // Usa setDoc com merge: true para criar o campo se não existir, ou atualizar se existir
             await setDoc(userDocRef, { displayName: trimmedName }, { merge: true });
-            Alert.alert("Sucesso", "Seu nome foi atualizado!");
+            showMessage({
+                message: "Oba!",
+                description: "Seu nome foi atualizado!",
+                backgroundColor: colors.success,
+                color: colors.textPrimary,
+            });
         } catch (error: any) {
             console.error("Erro ao salvar nome:", error);
-            Alert.alert("Erro", "Não foi possível salvar seu nome: " + error.message);
+            showMessage({
+                message: "Ops!",
+                description: "Não foi possível salvar seu nome: " + error.message,
+                backgroundColor: colors.error,
+                color: colors.textPrimary,
+            });
         } finally {
             setIsSavingName(false);
         }
