@@ -1,10 +1,10 @@
 // app/(tabs)/budget.tsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useLayoutEffect } from 'react';
 import {
     View, Text, StyleSheet, SectionList, ActivityIndicator,
     TouchableOpacity, RefreshControl 
 } from 'react-native';
-import { Stack } from 'expo-router'; 
+import { router, Stack, useNavigation } from 'expo-router'; 
 import { useTheme } from '@/context/ThemeContext';        
 import { useGroup } from '@/context/GroupContext';         
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +38,7 @@ export default function BudgetScreen() {
   const { colors } = useTheme();
   const { groupId, groupData, isLoadingGroup } = useGroup();
   const styles = getStyles(colors);
+  const navigation = useNavigation();
 
   const [allBudgets, setAllBudgets] = useState<BudgetData[]>([]);
   const [transactionsForDisplayedMonth, setTransactionsForDisplayedMonth] = useState<Transaction[]>([]);
@@ -185,6 +186,20 @@ export default function BudgetScreen() {
         setShowConfirmDeleteModal(true);
     };
 
+      useLayoutEffect(() => {
+        navigation.setOptions({
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push("/screens/recurring")}
+              style={{ marginRight: 15 }}
+            >
+              <Ionicons name="card-outline" size={24} color={"#fff"} />
+            </TouchableOpacity>
+          ),
+          title: "Orçamentos",
+        });
+      }, [navigation, router]);
+
     const confirmDeleteBudget = async () => {
         if (!groupId || !budgetIdToDelete) return; 
 
@@ -267,7 +282,6 @@ export default function BudgetScreen() {
 
   return (
     <View style={styles.container}>
-       <Stack.Screen options={{ title: 'Orçamentos' }} />
 
        <View style={styles.monthNavigator}>
            <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>

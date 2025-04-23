@@ -537,6 +537,7 @@ const getStyles = (colors: any) =>
       color: "#FFFFFF",
       fontSize: 16,
       fontWeight: "bold",
-    },  });
+    }, 
+   });
 
 export default AddTransactionModal;

@@ -12,13 +12,6 @@ const ANDROID_CHANNEL_ID = 'default-channel'; // Use um nome descritivo
  */
 export const requestPermissionsAsync = async (): Promise<boolean> => {
   // Notificações podem não funcionar corretamente em emuladores
-  if (!Constants.isDevice && Platform.OS !== 'web') {
-    console.warn('Notification permissions check skipped: Not running on a physical device.');
-    // Em alguns casos, pode querer retornar true para desenvolvimento, mas false é mais seguro
-    // return true; // Descomente para permitir testes em emuladores (com ressalvas)
-     Alert.alert("Aviso", "Permissões de notificação não podem ser verificadas corretamente em emuladores.");
-     return false; // Retorna false se não for dispositivo físico
-  }
 
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();

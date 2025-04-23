@@ -125,3 +125,44 @@ export interface CategorySpending {
   totalSpent: number;     // Total gasto nessa categoria no período
   percentage?: number;    // Porcentagem opcional do gasto total
 }
+
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+// Definição de uma transação recorrente (o modelo, não a transação real)
+export interface RecurringTransaction {
+  id: string;
+  name: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  frequency: RecurrenceFrequency;
+  interval: number; // Ex: frequency='monthly', interval=2 -> a cada 2 meses
+  startDate: Timestamp;
+  nextDueDate: Timestamp; // A data da PRÓXIMA ocorrência a ser criada/lembrada
+  lastCreatedDate?: Timestamp; // Data da última vez que foi criada (opcional)
+  endDate?: Timestamp; // Data final da recorrência (opcional)
+  notes?: string;
+  isActive: boolean; // Permite desativar sem excluir
+  userId: string; // Quem criou/gerenciou por último
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+export interface BillReminder {
+  id: string;
+  name: string;
+  value: number;
+  category: string;
+  dueDate: Timestamp;
+  isPaid: boolean;
+  notes?: string;
+  isRecurring: boolean;
+  frequency?: RecurrenceFrequency;
+  interval?: number;
+  endDate?: Timestamp;
+  notificationDaysBefore?: number;
+  userId: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+  lastPaidDate?: Timestamp;
+}

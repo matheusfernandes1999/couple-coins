@@ -38,6 +38,7 @@ import {
 import SummaryCard from "@/components/dashboard/SummaryCard"; // Reutiliza o card de resumo
 import TemporalTrends from "@/components/insights/TemporalTrends";
 import CategorySpendingChange from "@/components/insights/CategorySpendingChange";
+import UpcomingBillsInsight from "@/components/insights/UpcomingBillsInsight";
 
 const getMonthBounds = (date: Date): { start: Date; end: Date } => {
   const year = date.getFullYear();
@@ -570,6 +571,11 @@ export default function InsightsScreen() {
             />
           </View>
 
+          <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Próximos Gastos</Text>
+                <UpcomingBillsInsight groupId={groupId!} daysAhead={30} /> {/* Usa 30 dias por padrão */}
+           </View>
+           
           {/* Gastos por Categoria */}
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>
