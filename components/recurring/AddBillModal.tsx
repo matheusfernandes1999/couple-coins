@@ -11,7 +11,6 @@ import { Timestamp, addDoc, updateDoc, doc, collection, serverTimestamp, deleteF
 import { db, auth } from '@/lib/firebase'; // Ajuste o caminho
 import { BillReminder, RecurrenceFrequency } from '@/types'; // Ajuste o caminho
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-// Removido: Picker import
 
 interface AddBillModalProps {
   isVisible: boolean;
