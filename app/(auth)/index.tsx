@@ -2,16 +2,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator // Import ActivityIndicator
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator 
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword
 } from 'firebase/auth'; // Importa funções de auth
-import { auth } from '../../lib/firebase'; // Importa a instância auth
+import { auth } from '@/lib/firebase'; // Importa a instância auth
+import { showMessage } from "react-native-flash-message";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -20,13 +20,15 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false); // Estado de carregamento
   const [isRegistering, setIsRegistering] = useState(false); // Controla se mostra campo de confirmar senha
 
-  const router = useRouter(); // Não precisamos mais dele para redirecionar após login/cadastro
   const { colors, effectiveTheme } = useTheme();
 
-  // --- FUNÇÃO DE LOGIN ---
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Erro", "Por favor, preencha e-mail e senha.");
+      showMessage({
+        message: "Preencha todos os campos.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
       return;
     }
     setIsLoading(true);
@@ -35,7 +37,6 @@ export default function LoginScreen() {
       // O usuário será redirecionado pelo listener onAuthStateChanged no _layout.tsx
       await signInWithEmailAndPassword(auth, email, password);
       console.log('Login bem-sucedido (redirecionamento pelo listener)');
-      // Não precisa mais do router.replace aqui
     } catch (error: any) {
       console.error("Erro no login:", error);
       let errorMessage = "Ocorreu um erro ao tentar fazer login.";
@@ -44,24 +45,39 @@ export default function LoginScreen() {
       } else if (error.code === 'auth/invalid-email') {
           errorMessage = "O formato do e-mail é inválido.";
       }
-      Alert.alert("Erro de Login", errorMessage);
+      showMessage({
+        message: errorMessage,
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // --- FUNÇÃO DE CADASTRO ---
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
-      Alert.alert("Erro", "Por favor, preencha todos os campos para cadastro.");
+      showMessage({
+        message: "Preencha todos os campos.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert("Erro", "As senhas não coincidem.");
+      showMessage({
+        message: "As senhas não coincidem.",  
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+      });
       return;
     }
      if (password.length < 6) {
-        Alert.alert("Erro", "A senha deve ter pelo menos 6 caracteres.");
+        showMessage({
+          message: "A senha deve ter pelo menos 6 caracteres.",
+          backgroundColor: colors.error,
+          color: colors.textPrimary,
+        });
         return;
      }
 
@@ -71,9 +87,11 @@ export default function LoginScreen() {
       // O usuário será redirecionado pelo listener onAuthStateChanged no _layout.tsx
       await createUserWithEmailAndPassword(auth, email, password);
       console.log('Cadastro bem-sucedido (redirecionamento pelo listener)');
-      // Você pode querer adicionar dados adicionais do usuário no Firestore aqui
-      // Ex: await setDoc(doc(db, "users", userCredential.user.uid), { email: email, createdAt: serverTimestamp() });
-      Alert.alert("Sucesso!", "Conta criada. Você será redirecionado.");
+      showMessage({
+        message: "^Conta criada com sucesso!",
+        backgroundColor: colors.success,
+        color: colors.textPrimary,
+      });
     } catch (error: any) {
       console.error("Erro no cadastro:", error);
       let errorMessage = "Ocorreu um erro ao tentar criar a conta.";
@@ -90,16 +108,11 @@ export default function LoginScreen() {
     }
   };
 
-  // Alterna a UI entre modo Login e Cadastro
   const toggleRegisterMode = () => {
      setIsRegistering(!isRegistering);
-     // Limpa os campos ao trocar de modo (opcional)
-     // setEmail('');
-     // setPassword('');
-     // setConfirmPassword('');
   }
 
-  const styles = getStyles(colors, effectiveTheme); // Pega estilos baseados no tema
+  const styles = getStyles(colors, effectiveTheme);
 
   return (
     <KeyboardAvoidingView
@@ -173,7 +186,6 @@ export default function LoginScreen() {
   );
 }
 
-// Função de estilos (movida para fora para clareza, adaptada para novos botões)
 const getStyles = (colors: ReturnType<typeof useTheme>['colors'], theme: ReturnType<typeof useTheme>['effectiveTheme']) => StyleSheet.create({
    container: { flex: 1, backgroundColor: colors.background },
    innerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
@@ -183,7 +195,6 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors'], theme: ReturnT
    inputIcon: { marginRight: 10 },
    input: { flex: 1, fontSize: 16, color: colors.textPrimary },
    primaryButton: { backgroundColor: colors.primary, paddingVertical: 15, borderRadius: 10, alignItems: 'center', width: '100%', marginTop: 20, minHeight: 50, justifyContent: 'center', opacity: 1 /* Define a opacidade padrão */ },
-   // primaryButtonDisabled: { opacity: 0.6 }, // Estilo opcional para botão desabilitado
    primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
    secondaryButton: { marginTop: 25 },
    secondaryButtonText: { color: colors.primary, fontSize: 14 },

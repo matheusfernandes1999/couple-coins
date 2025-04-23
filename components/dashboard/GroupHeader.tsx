@@ -142,7 +142,7 @@ const GroupHeader: React.FC = () => {
       ) : (
         <View style={styles.groupNameRow}>
           <Text style={styles.groupName} numberOfLines={1} ellipsizeMode="tail">
-            Sua família: {groupData.groupName || "Grupo..."}
+            Seu grupo: {groupData.groupName || "Grupo..."}
           </Text>
           <TouchableOpacity
             onPress={() => { setEditingName(groupData.groupName || ''); setIsEditing(true); }}
@@ -172,7 +172,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     width: '100%',
     padding: 15,
-    marginHorizontal: 15, // Apenas horizontal se não for o primeiro elemento
     marginTop: 15, // Margem superior
     marginBottom: 5, // Margem inferior pequena antes do próximo resumo
     borderRadius: 10,
@@ -210,7 +209,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginBottom: 10,
   },
   groupName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: colors.textPrimary,
     flex: 1,

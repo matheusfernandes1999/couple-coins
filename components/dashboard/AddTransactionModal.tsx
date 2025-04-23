@@ -7,12 +7,13 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
   FlatList,
-  Keyboard, 
+  Keyboard,
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,7 +28,7 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
-import { db, auth } from "../../lib/firebase"; 
+import { db, auth } from "../../lib/firebase";
 import { Transaction } from "@/types";
 import { showMessage } from "react-native-flash-message";
 
@@ -35,8 +36,8 @@ interface AddTransactionModalProps {
   isVisible: boolean;
   onClose: () => void;
   groupId: string | null;
-  existingCategories: string[]; 
-  transactionToEdit?: Transaction | null; 
+  existingCategories: string[];
+  transactionToEdit?: Transaction | null;
 }
 
 type TransactionType = "income" | "expense";
@@ -48,23 +49,23 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   existingCategories,
   transactionToEdit,
 }) => {
-  const { colors } = useTheme(); 
-  const styles = getStyles(colors); 
-  const currentUser = auth.currentUser; 
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+  const currentUser = auth.currentUser;
 
   const isEditing = !!transactionToEdit;
 
-  const [amount, setAmount] = useState(""); 
+  const [amount, setAmount] = useState("");
   const [type, setType] = useState<TransactionType>("expense");
-  const [category, setCategory] = useState(""); 
-  const [date, setDate] = useState(new Date()); 
+  const [category, setCategory] = useState("");
+  const [date, setDate] = useState(new Date());
   const [description, setDescription] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false); 
-  const [isLoading, setIsLoading] = useState(false); 
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false); 
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (isVisible) {
@@ -72,7 +73,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         setAmount(transactionToEdit.value.toString().replace(".", ","));
         setType(transactionToEdit.type);
         setCategory(transactionToEdit.category);
-        setDate(transactionToEdit.date.toDate()); 
+        setDate(transactionToEdit.date.toDate());
         setDescription(transactionToEdit.description || "");
       } else {
         setAmount("");
@@ -98,10 +99,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     ) {
       const filtered = existingCategories
         .filter((cat) => cat.toLowerCase().includes(currentInput))
-        .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+        .sort((a, b) =>
+          a.localeCompare(b, "pt-BR", { sensitivity: "base" })
+        );
 
       setCategorySuggestions(filtered);
-      const exactMatch = filtered.some((f) => f.toLowerCase() === currentInput);
+      const exactMatch = filtered.some(
+        (f) => f.toLowerCase() === currentInput
+      );
       setShowSuggestions(filtered.length > 0 && !exactMatch);
     } else {
       setCategorySuggestions([]);
@@ -121,11 +126,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   };
 
   const handleSelectSuggestion = (selectedCat: string) => {
-    console.log("Suggestion selected:", selectedCat);
     setCategory(selectedCat);
     setCategorySuggestions([]);
     setShowSuggestions(false);
-    Keyboard.dismiss(); 
+    Keyboard.dismiss();
   };
 
   const handleSaveTransaction = async () => {
@@ -181,8 +185,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         );
         const updateData = {
           ...transactionCommonData,
-          updatedAt: serverTimestamp(), 
-          lastEditedBy: currentUser.uid, 
+          updatedAt: serverTimestamp(),
+          lastEditedBy: currentUser.uid,
         };
         await updateDoc(transDocRef, updateData);
         showMessage({
@@ -191,7 +195,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           backgroundColor: colors.success,
           color: colors.textPrimary,
         });
-
       } else {
         const newTransactionData = {
           ...transactionCommonData,
@@ -233,196 +236,164 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   return (
     <Modal
       animationType="slide"
-      transparent={true}
+      transparent
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidingView}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={onClose}
-        >
-          <TouchableOpacity
-            style={styles.modalContainer}
-            activeOpacity={1}
-            onPress={() => Keyboard.dismiss()}
+      <TouchableWithoutFeedback onPress={onClose} accessible={false}>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardAvoidingView}
           >
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {isEditing ? "Editar Transação" : "Nova Transação"}
-                </Text>
-                <TouchableOpacity onPress={onClose} disabled={isLoading}>
-                  <Ionicons
-                    name="close-circle"
-                    size={28}
-                    color={colors.textSecondary}
-                  />
-                </TouchableOpacity>
-              </View>
+            <TouchableWithoutFeedback
+              onPress={() => Keyboard.dismiss()}
+              accessible={false}
+            >
+              <View style={styles.modalContainer}>
+                <ScrollView keyboardShouldPersistTaps="always">
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>
+                      {isEditing ? "Editar Transação" : "Nova Transação"}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={onClose}
+                      disabled={isLoading}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={28}
+                        color={colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
 
-              <View style={styles.typeSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    styles.typeButtonLeft,
-                    type === "expense" && styles.typeButtonActive,
-                  ]}
-                  onPress={() => setType("expense")}
-                  disabled={isLoading}
-                >
-                  <Text
-                    style={[
-                      styles.typeButtonText,
-                      type === "expense" && styles.typeButtonTextActive,
-                    ]}
-                  >
-                    {" "}
-                    Saída{" "}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    styles.typeButtonRight,
-                    type === "income" && styles.typeButtonActive,
-                  ]}
-                  onPress={() => setType("income")}
-                  disabled={isLoading}
-                >
-                  <Text
-                    style={[
-                      styles.typeButtonText,
-                      type === "income" && styles.typeButtonTextActive,
-                    ]}
-                  >
-                    {" "}
-                    Entrada{" "}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.label}>Valor (R$)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0,00"
-                placeholderTextColor={colors.placeholder}
-                keyboardType="numeric"
-                value={amount}
-                onChangeText={setAmount}
-                editable={!isLoading}
-              />
-
-              <Text style={styles.label}>Categoria</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Digite ou selecione uma categoria"
-                placeholderTextColor={colors.placeholder}
-                value={category}
-                onChangeText={setCategory}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                onFocus={() =>
-                  setShowSuggestions(
-                    categorySuggestions.length > 0 && category.length > 0
-                  )
-                }
-                editable={!isLoading}
-              />
-
-              {showSuggestions && categorySuggestions.length > 0 && (
-                <View style={styles.suggestionsContainer}>
-                  <FlatList
-                    data={categorySuggestions}
-                    keyExtractor={(item) => item}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={styles.suggestionItem}
-                        onPress={() => handleSelectSuggestion(item)}
+                  {/* Bloco de seleção de tipo */}
+                  <View style={styles.typeSelector}>
+                    <TouchableOpacity
+                      style={[styles.typeButton, styles.typeButtonLeft, type === "expense" && styles.typeButtonActive]}
+                      onPress={() => setType("expense")}
+                      disabled={isLoading}
+                    >
+                      <Text
+                        style={[styles.typeButtonText, type === "expense" && styles.typeButtonTextActive]}
                       >
-                        <Text style={styles.suggestionText}>{item}</Text>
-                      </TouchableOpacity>
-                    )}
-                    nestedScrollEnabled={true}
-                    keyboardShouldPersistTaps="always"
-                    scrollEnabled={false}
-                    style={{ maxHeight: 150 }}
+                        Saída
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.typeButton, styles.typeButtonRight, type === "income" && styles.typeButtonActive]}
+                      onPress={() => setType("income")}
+                      disabled={isLoading}
+                    >
+                      <Text
+                        style={[styles.typeButtonText, type === "income" && styles.typeButtonTextActive]}
+                      >
+                        Entrada
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Valor */}
+                  <Text style={styles.label}>Valor (R$)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0,00"
+                    placeholderTextColor={colors.placeholder}
+                    keyboardType="numeric"
+                    value={amount}
+                    onChangeText={setAmount}
+                    editable={!isLoading}
                   />
-                </View>
-              )}
 
-              <Text style={styles.label}>Data</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
-                disabled={isLoading}
-              >
-                <Text style={styles.dateButtonText}>
-                  {date.toLocaleDateString("pt-BR")}
-                </Text>
-                <Ionicons
-                  name="calendar-outline"
-                  size={20}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={handleDateChange}
-                  maximumDate={new Date()}
-                  textColor={colors.textPrimary}
-                />
-              )}
-              {showDatePicker && Platform.OS === "ios" && (
-                <TouchableOpacity
-                  onPress={() => setShowDatePicker(false)}
-                  style={styles.closeDatePickerButton}
-                >
-                  <Text style={styles.closeDatePickerText}>Confirmar Data</Text>
-                </TouchableOpacity>
-              )}
+                  {/* Categoria */}
+                  <Text style={styles.label}>Categoria</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Digite ou selecione uma categoria"
+                    placeholderTextColor={colors.placeholder}
+                    value={category}
+                    onChangeText={setCategory}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    onFocus={() => setShowSuggestions(categorySuggestions.length > 0 && category.length > 0)}
+                    editable={!isLoading}
+                  />
+                  {showSuggestions && (
+                    <View style={styles.suggestionsContainer}>
+                      <FlatList
+                        data={categorySuggestions}
+                        keyExtractor={(item) => item}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={styles.suggestionItem}
+                            onPress={() => handleSelectSuggestion(item)}
+                          >
+                            <Text style={styles.suggestionText}>{item}</Text>
+                          </TouchableOpacity>
+                        )}
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="always"
+                        scrollEnabled={false}
+                        style={{ maxHeight: 150 }}
+                      />
+                    </View>
+                  )}
 
-              <Text style={styles.label}>Descrição (Opcional)</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Detalhes adicionais..."
-                placeholderTextColor={colors.placeholder}
-                value={description}
-                onChangeText={setDescription}
-                multiline={true}
-                editable={!isLoading}
-              />
+                  {/* Data */}
+                  <Text style={styles.label}>Data</Text>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowDatePicker(true)}
+                    disabled={isLoading}
+                  >
+                    <Text style={styles.dateButtonText}>{date.toLocaleDateString("pt-BR")}</Text>
+                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={date}
+                      mode="date"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      onChange={handleDateChange}
+                      maximumDate={new Date()}
+                      textColor={colors.textPrimary}
+                    />
+                  )}
+                  {showDatePicker && Platform.OS === "ios" && (
+                    <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.closeDatePickerButton}>
+                      <Text style={styles.closeDatePickerText}>Confirmar Data</Text>
+                    </TouchableOpacity>
+                  )}
 
-              {errorMessage && (
-                <Text style={styles.errorMessage}>{errorMessage}</Text>
-              )}
+                  {/* Descrição */}
+                  <Text style={styles.label}>Descrição (Opcional)</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Detalhes adicionais..."
+                    placeholderTextColor={colors.placeholder}
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    editable={!isLoading}
+                  />
 
-              <TouchableOpacity
-                style={[
-                  styles.saveButton,
-                  isLoading && styles.saveButtonDisabled,
-                ]}
-                onPress={handleSaveTransaction}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.saveButtonText}>
-                    {isEditing ? "Atualizar Transação" : "Salvar Transação"}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
+                  {/* Mensagem de erro */}
+                  {errorMessage && <Text style={styles.errorMessage}>{errorMessage}</Text>}
+
+                  {/* Botão Salvar */}
+                  <TouchableOpacity
+                    style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+                    onPress={handleSaveTransaction}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>{isEditing ? "Atualizar Transação" : "Salvar Transação"}</Text>}
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };
@@ -432,16 +403,19 @@ const getStyles = (colors: any) =>
     keyboardAvoidingView: { flex: 1 },
     modalOverlay: {
       flex: 1,
-      justifyContent: "flex-end",
       backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "flex-end",
     },
     modalContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
       backgroundColor: colors.bottomSheet,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       padding: 20,
-      paddingBottom: Platform.OS === "ios" ? 40 : 30,
-      maxHeight: "90%",
+      paddingBottom: Platform.OS === 'ios' ? 40 : 30,
     },
     modalHeader: {
       flexDirection: "row",
@@ -449,7 +423,11 @@ const getStyles = (colors: any) =>
       alignItems: "center",
       marginBottom: 20,
     },
-    modalTitle: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: colors.textPrimary,
+    },
     label: {
       fontSize: 14,
       color: colors.textSecondary,
@@ -467,8 +445,12 @@ const getStyles = (colors: any) =>
       borderColor: colors.border,
       marginBottom: 5,
     },
-    textArea: { minHeight: 80, textAlignVertical: "top", marginBottom: 10 },
-    typeSelector: { flexDirection: "row", marginBottom: 15, marginTop: 5 },
+    textArea: {
+      minHeight: 80,
+      textAlignVertical: "top",
+      marginBottom: 10,
+    },
+    typeSelector: { flexDirection: "row", marginVertical: 10 },
     typeButton: {
       flex: 1,
       paddingVertical: 12,
@@ -488,7 +470,11 @@ const getStyles = (colors: any) =>
       borderLeftWidth: 0.75,
     },
     typeButtonActive: { backgroundColor: colors.primary },
-    typeButtonText: { fontSize: 15, fontWeight: "500", color: colors.primary },
+    typeButtonText: {
+      fontSize: 15,
+      fontWeight: "500",
+      color: colors.primary,
+    },
     typeButtonTextActive: { color: "#FFFFFF", fontWeight: "bold" },
     dateButton: {
       backgroundColor: colors.surface,
@@ -526,9 +512,6 @@ const getStyles = (colors: any) =>
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    suggestionItem_last: {
-      borderBottomWidth: 0,
-    },
     suggestionText: {
       fontSize: 16,
       color: colors.textPrimary,
@@ -536,8 +519,7 @@ const getStyles = (colors: any) =>
     errorMessage: {
       color: colors.error,
       textAlign: "center",
-      marginTop: 10,
-      marginBottom: 5,
+      marginVertical: 10,
       fontSize: 14,
     },
     saveButton: {
@@ -547,8 +529,14 @@ const getStyles = (colors: any) =>
       alignItems: "center",
       marginTop: 20,
     },
-    saveButtonDisabled: { backgroundColor: colors.textSecondary, opacity: 0.7 },
-    saveButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold" },
-  });
+    saveButtonDisabled: {
+      backgroundColor: colors.textSecondary,
+      opacity: 0.7,
+    },
+    saveButtonText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "bold",
+    },  });
 
 export default AddTransactionModal;

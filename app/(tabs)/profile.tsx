@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  FlatList,
   TextInput,
   ActivityIndicator,
   Keyboard,
@@ -26,6 +25,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { showMessage } from "react-native-flash-message";
+import GroupMembersList from "@/components/profile/GroupMemberList";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -279,8 +279,19 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {isLoadingGroup ? (
+        <ActivityIndicator color={colors.primary} />
+      ) : !groupId ? (
+          <Text style={styles.infoText}>Crie ou entre em um grupo para ver os membros.</Text>
+      ) : (
+        <>
+          <Text style={styles.sectionTitle}>Seu grupo</Text>
+          <GroupMembersList />
+        </>
+      )}
+
       <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Gerenciar Categorias do Grupo</Text>
+            <Text style={styles.sectionTitle}>Gerenciar Categorias</Text>
             {isLoadingGroup ? (
                 <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }}/>
             ) : !groupId ? (

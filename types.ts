@@ -104,3 +104,24 @@ export interface FinancialSummary {
   expenses: number;
   balance: number;
 }
+
+
+export interface SpendingChange {
+  category: string;
+  changeAmount: number;
+  changePercent: number | null; // Null se gasto anterior foi 0
+  current: number; // Gasto atual
+  previous: number; // Gasto do mês anterior
+}
+
+export interface BudgetComparison extends BudgetData { // Estende BudgetData
+    spentAmount: number;
+    remainingAmount: number;
+    progress: number; // 0 a 1 (ou mais se estourar)
+}
+
+export interface CategorySpending {
+  category: string;       // Nome da categoria
+  totalSpent: number;     // Total gasto nessa categoria no período
+  percentage?: number;    // Porcentagem opcional do gasto total
+}

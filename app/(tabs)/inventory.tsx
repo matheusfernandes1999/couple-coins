@@ -27,6 +27,7 @@ import SelectShoppingListModal from '@/components/inventory/SelectShoppingListMo
 import InventoryItemDetailModal from '@/components/inventory/InventoryItemDetailModal';
 import AddTransactionFAB from '@/components/dashboard/AddTransactionFAB';            
 import { showMessage } from 'react-native-flash-message';
+import { scheduleLocalNotification, cancelScheduledNotification } from '@/utils/NotificationManager';
 
 interface InventorySection {
     title: string; 
@@ -49,60 +50,88 @@ export default function InventoryScreen() {
     const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
     const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItemData | null>(null);
     const [editingInventoryItem, setEditingInventoryItem] = useState<InventoryItemData | null>(null);
+    const [scheduledNotifications, setScheduledNotifications] = useState<Record<string, string>>({});
 
+    // 1) Buscar itens do inventário
     useEffect(() => {
         if (!groupId) {
             setRawInventoryItems([]);
             setIsLoading(false);
-            return () => { };
+            return;
         }
         if (!isLoadingGroup) setIsLoading(true);
 
-        const inventoryQuery = query(collection(db, "groups", groupId, "inventoryItems"));
-
+        const inventoryQuery = query(collection(db, 'groups', groupId, 'inventoryItems'));
         const unsubscribe = onSnapshot(inventoryQuery, (querySnapshot) => {
             const fetchedItems: InventoryItemData[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
+            querySnapshot.forEach(docSnap => {
+                const data = docSnap.data();
                 if (data.name && data.quantity !== undefined && data.unit) {
-                    fetchedItems.push({ id: doc.id, groupId: groupId, ...data } as InventoryItemData);
+                    fetchedItems.push({ id: docSnap.id, groupId, ...data } as InventoryItemData);
                 } else {
-                    showMessage({
-                        message: "Ops!",
-                        description: "Item inválido encontrado no inventário.",
-                        backgroundColor: colors.error,
-                        color: colors.textPrimary,
-                    });
+                    showMessage({ message: 'Ops!', description: 'Item inválido encontrado no inventário.', backgroundColor: colors.error, color: colors.textPrimary });
                 }
             });
             setRawInventoryItems(fetchedItems);
             setIsLoading(false);
         }, (error) => {
-            showMessage({
-                message: "Ops!",
-                description: "Erro ao carregar o inventário.",
-                backgroundColor: colors.error,
-                color: colors.textPrimary,
-            });
+            showMessage({ message: 'Ops!', description: 'Erro ao carregar o inventário.', backgroundColor: colors.error, color: colors.textPrimary });
             setIsLoading(false);
         });
-
         return () => unsubscribe();
     }, [groupId, isLoadingGroup]);
 
+    // 2) Agendar/cancelar notificações para items com nextPurchaseDate
     useEffect(() => {
-        if (!groupId) {
-            setAvailableShoppingLists([]);
-            return () => { };
-        }
+        rawInventoryItems.forEach(item => {
+            const itemId = item.id;
+            // Caso tenha data para próxima compra
+            if (item.nextPurchaseDate) {
+                const date = item.nextPurchaseDate.toDate();
+                // se data passada, não agenda
+                if (date <= new Date()) return;
+                // se já agendado, pula
+                if (scheduledNotifications[itemId]) return;
+                // agenda notificação
+                scheduleLocalNotification(
+                    {
+                      title: 'Lembrete de Compra',
+                      body: `Está na hora de comprar ${item.name}`,
+                      data: { type: 'inventoryReminder', itemId, groupId },
+                    },
+                    date
+                  )                  
+                  .then(identifier => {
+                    if (identifier) {
+                        setScheduledNotifications(prev => ({ ...prev, [itemId]: identifier }));
+                    }
+                });
+            } else {
+                // se não há data mas existia notificação, cancela
+                const existingId = scheduledNotifications[itemId];
+                if (existingId) {
+                    cancelScheduledNotification(existingId);
+                    setScheduledNotifications(prev => {
+                        const updated = { ...prev };
+                        delete updated[itemId];
+                        return updated;
+                    });
+                }
+            }
+        });
+    }, [rawInventoryItems]);
+
+    // 3) Buscar listas de compras disponíveis
+    useEffect(() => {
+        if (!groupId) { setAvailableShoppingLists([]); return; }
         const listsQuery = query(
-            collection(db, "groups", groupId, "shoppingLists"),
-            where("archived", "==", false),
+            collection(db, 'groups', groupId, 'shoppingLists'),
+            where('archived', '==', false),
         );
-        const unsubscribe = onSnapshot(listsQuery, (snapshot) => {
+        const unsubscribe = onSnapshot(listsQuery, snapshot => {
             const lists: ShoppingList[] = [];
-            snapshot.forEach(doc => lists.push({ id: doc.id, ...doc.data() } as ShoppingList));
-            setAvailableShoppingLists(lists); 
+            snapshot.forEach(docSnap => lists.push({ id: docSnap.id, ...docSnap.data() } as ShoppingList));
+            setAvailableShoppingLists(lists);
         });
         return () => unsubscribe();
     }, [groupId]);

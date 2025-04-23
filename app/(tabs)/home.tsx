@@ -1,5 +1,5 @@
 // app/(tabs)/home.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import {
     View,
     StyleSheet,
@@ -18,7 +18,7 @@ import {
   collection, arrayUnion, updateDoc, query, where, getDocs,
   deleteDoc
 } from 'firebase/firestore';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 
 import { Transaction, FinancialSummary } from '@/types';
 import { getMonthYear, getWeekRange, generateInviteCode } from '@/utils/helpers';
@@ -35,6 +35,7 @@ import { showMessage } from "react-native-flash-message";
 
 export default function HomeScreen() {
   const { colors } = useTheme();
+  const navigation = useNavigation();
   const { groupId, groupData, isLoadingGroup, groupError, fetchUserGroupId } = useGroup();
   const currentUser = auth.currentUser;
   const router = useRouter();
@@ -130,6 +131,20 @@ export default function HomeScreen() {
     };
   }, [groupId, calculateSummaries, isLoadingGroup]);
 
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => router.push("/screens/insights")}
+          style={{ marginRight: 15 }}
+        >
+          <Ionicons name="flash" size={24} color={"#fff"} />
+        </TouchableOpacity>
+      ),
+      title: "Início",
+    });
+  }, [navigation, router]);
+  
   const handleCreateGroup = async () => {
     if (!currentUser || !newGroupNameInput.trim()) { 
       showMessage({
@@ -315,7 +330,7 @@ export default function HomeScreen() {
     };
 
     let typeFilterText = 'Todas';
-    let typeFilterIcon: React.ComponentProps<typeof Ionicons>['name'] = 'chevron-collapse-outline';
+    let typeFilterIcon: React.ComponentProps<typeof Ionicons>['name'] = 'podium-outline';
     let valueColor = '#ffbf00';
   
     if (transactionTypeFilter === 'income') {
@@ -343,7 +358,7 @@ export default function HomeScreen() {
       <View style={styles.summaryHeader}>
         <Text style={[styles.summaryText, summaryViewType === 'month' && styles.summaryTextActive]} onPress={() => setSummaryViewType('month')}>Mês</Text>
         <Text style={[styles.summaryText, summaryViewType === 'week' && styles.summaryTextActive]} onPress={() => setSummaryViewType('week')}>Semana</Text>
-        <TouchableOpacity style={[styles.viewAllButton]} onPress={navigateToAllTransactions}><Text style={styles.summaryText}>Ver todas</Text><Ionicons name="arrow-forward" size={16} color={colors.secondary}/></TouchableOpacity>
+        <TouchableOpacity style={[styles.viewAllButton]} onPress={navigateToAllTransactions}><Text style={styles.summaryTextAll}>Ver todas</Text><Ionicons name="arrow-forward" size={16} color="white"/></TouchableOpacity>
       </View>
       <ScrollView
         style={styles.scrollContainer}
@@ -419,6 +434,13 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
     paddingHorizontal: 22,
     fontWeight: '600', 
   },
+  summaryTextAll: {
+    fontSize: 14, 
+    color: colors.textPrimary,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    fontWeight: '600', 
+  },
   summaryTextActive: {
     borderBottomColor: colors.secondary,
     borderBottomWidth: 3,
@@ -449,10 +471,11 @@ const getStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.
      fontWeight: '500',
      color: colors.primary,
   },
-  
   viewAllButton: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.secondary,
+    borderRadius: 18,
   },
 });

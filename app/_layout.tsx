@@ -8,10 +8,51 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { GroupProvider } from '@/context/GroupContext';
 import FlashMessage from "react-native-flash-message";
+import * as Notifications from 'expo-notifications'; 
+import { initializeNotifications } from '@/utils/NotificationManager'; 
 
 function useProtectedRoutes(user: User | null) {
   const segments = useSegments();
   const router = useRouter();
+
+  useEffect(() => {
+    // Chama a função de inicialização do manager
+    initializeNotifications().then(granted => {
+        if (!granted) {
+            console.log("Permissão não concedida, algumas funcionalidades podem ser limitadas.");
+            // Poderia mostrar um feedback para o usuário aqui se quisesse
+        }
+    });
+
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log("Usuário interagiu com a notificação:", response.notification.request.content.title);
+      const data = response.notification.request.content.data;
+      console.log("Dados da notificação:", data);
+
+      // Exemplo: Navegar para uma tela específica baseada nos dados
+       if (data?.type === 'inventoryReminder' && data?.itemId && data?.groupId) {
+         console.log(`Navegando para o item de inventário: ${data.itemId} no grupo ${data.groupId}`);
+         // Ajuste a rota conforme sua estrutura. Ex: Pode precisar do groupId.
+         // Exemplo: router.push(`/inventory/${data.itemId}`); // Se for uma rota simples
+         // Exemplo: router.push({ pathname: '/inventory/item', params: { itemId: data.itemId, groupId: data.groupId } });
+       } else if (data?.screen) {
+           console.log(`Navegando para a tela: ${data.screen}`);
+           // CUIDADO: Valide o valor de data.screen por segurança
+           // router.push(data.screen as any); // Use 'any' com cautela ou valide a rota
+       }
+    });
+
+    // Listener: Notificação recebida com app aberto (opcional)
+     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+          console.log("Notificação Recebida (Foreground):", notification.request.content.title);
+     });
+
+    // Limpa os listeners ao desmontar
+    return () => {
+      Notifications.removeNotificationSubscription(responseListener);
+      Notifications.removeNotificationSubscription(notificationListener);
+    };
+  }, [router]);
 
   useEffect(() => {
     const inAuthGroup = segments[0] === '(auth)';

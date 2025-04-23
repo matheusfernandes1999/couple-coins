@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '@/lib/firebase'; // Importar db e auth
 import { doc, getDoc, setDoc } from 'firebase/firestore'; // Importar getDoc, setDoc, updateDoc
 import { showMessage } from 'react-native-flash-message';
+import GroupHeader from '@/components/dashboard/GroupHeader';
 
 // Define o tipo para as opções de tema, incluindo ícone
 type ThemeOption = {
@@ -62,7 +63,6 @@ export default function SettingsScreen() {
             headerShown: true // Garante que está visível
         });
     }, [navigation, colors]);
-    // -----------------------------------
 
     const themeOptions: ThemeOption[] = [
         { label: 'Claro', value: 'light', icon: 'sunny-outline' },
@@ -157,6 +157,10 @@ export default function SettingsScreen() {
                     </>
                  )}
                  
+                <View style={{ marginVertical: 20 }}>
+                    <GroupHeader />
+                </View> 
+
                 <Text style={styles.sectionTitle}>Aparência</Text>
                 {themeOptions.map((option) => (
                     <TouchableOpacity

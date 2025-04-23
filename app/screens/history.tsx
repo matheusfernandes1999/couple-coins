@@ -371,7 +371,7 @@ export default function HistoryScreen() {
   };
 
   let typeFilterText = 'Todas';
-  let typeFilterIcon: React.ComponentProps<typeof Ionicons>['name'] = 'chevron-collapse-outline';
+  let typeFilterIcon: React.ComponentProps<typeof Ionicons>['name'] = 'podium-outline';
   let valueColor = '#ffbf00';
 
   if (transactionTypeFilter === 'income') {
