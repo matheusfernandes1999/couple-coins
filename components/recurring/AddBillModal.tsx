@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
-    Platform, ActivityIndicator, Switch, Alert, Keyboard,
+    Platform, ActivityIndicator, Switch, Keyboard,
     KeyboardAvoidingView, Modal, FlatList // Adicionado FlatList para sugestões
 } from 'react-native';
 import { useTheme } from '@/context/ThemeContext'; // Ajuste o caminho
@@ -11,6 +11,7 @@ import { Timestamp, addDoc, updateDoc, doc, collection, serverTimestamp, deleteF
 import { db, auth } from '@/lib/firebase'; // Ajuste o caminho
 import { BillReminder, RecurrenceFrequency } from '@/types'; // Ajuste o caminho
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { showMessage } from 'react-native-flash-message';
 
 interface AddBillModalProps {
   isVisible: boolean;
@@ -107,7 +108,14 @@ const AddBillModal: React.FC<AddBillModalProps> = ({
     const handleEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
          setShowEndDatePicker(Platform.OS === 'ios');
          if (selectedDate) {
-             if (selectedDate < dueDate) { Alert.alert("Data Inválida", "Final < Vencimento."); return; }
+             if (selectedDate < dueDate) { 
+                showMessage({
+                    message: "Data Inválida",
+                    description: "Final < Vencimento.",
+                    backgroundColor: colors.error,
+                    color: colors.textPrimary,
+                });
+                return; }
              setEndDate(selectedDate);
          } else { setEndDate(null); } // Permite limpar? (Pode causar problemas se null for selecionado acidentalmente)
           if (Platform.OS === 'android') setShowEndDatePicker(false);
@@ -179,8 +187,12 @@ const AddBillModal: React.FC<AddBillModalProps> = ({
                   dataPayload.frequency = deleteField(); dataPayload.interval = deleteField(); dataPayload.endDate = deleteField();
              }
              await updateDoc(docRef, dataPayload);
-             Alert.alert("Sucesso", "Conta atualizada.");
-             // TODO: Lógica para reagendar notificações se datas/dias mudaram
+             showMessage({
+                message: "Deu certo!",
+                description: "Conta atualizada.",
+                backgroundColor: colors.success,
+                color: colors.textPrimary,
+            });
          } else {
              // CRIAR
              const collectionRef = collection(db, "groups", groupId, "bills");
@@ -190,8 +202,12 @@ const AddBillModal: React.FC<AddBillModalProps> = ({
              // Garante que campos recorrentes não existam se não for recorrente
              if (!isRecurring) { delete dataPayload.frequency; delete dataPayload.interval; delete dataPayload.endDate; }
              await addDoc(collectionRef, dataPayload);
-             Alert.alert("Sucesso", "Nova conta/lembrete criado.");
-             // TODO: Agendar a primeira notificação aqui ou em outro lugar
+             showMessage({
+                message: "Deu certo!",
+                description: "Nova conta/lembrete criado.",
+                backgroundColor: colors.success,
+                color: colors.textPrimary,
+            });
          }
          onClose();
      } catch (error: any) {

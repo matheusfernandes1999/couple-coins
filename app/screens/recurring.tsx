@@ -1,14 +1,14 @@
 // app/recurring.tsx
-import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
-import { Stack, useNavigation, useRouter } from 'expo-router';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { useNavigation, useRouter } from 'expo-router';
 import { useTheme } from '@/context/ThemeContext';
 import { useGroup } from '@/context/GroupContext';
 import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '@/lib/firebase';
 import {
-    collection, query, onSnapshot, orderBy, where, doc,
-    updateDoc, Timestamp, addDoc, serverTimestamp, // Mantém funções para Bills
+    collection, query, onSnapshot, orderBy, doc,
+    Timestamp, serverTimestamp, // Mantém funções para Bills
     deleteDoc, // Para deletar Bills (opcional)
     writeBatch
 } from 'firebase/firestore';
@@ -18,6 +18,7 @@ import { BillReminder, RecurrenceFrequency } from '@/types'; // Ajuste o caminho
 import BillListItem from '@/components/recurring/BillListItem';           // Ajuste o caminho
 import AddBillModal from '@/components/recurring/AddBillModal';           // Ajuste o caminho
 import AddTransactionFAB from '@/components/dashboard/AddTransactionFAB'; // Assume componente FAB genérico
+import { showMessage } from 'react-native-flash-message';
 
 // Helper para calcular próxima data (se ainda usado em handleMarkBillPaid)
 const calculateNextDueDate = (currentDue: Date, frequency: RecurrenceFrequency, interval: number): Date => {
@@ -78,7 +79,12 @@ export default function RecurringManagementScreen() {
         setIsLoadingBills(false);
     }, (error) => {
         console.error("RecurringScreen: Error listening to bills:", error);
-        Alert.alert("Erro", "Não foi possível carregar as contas.");
+        showMessage({
+            message: "Ops!",
+            description: "Não foi possível carregar as contas.",
+            backgroundColor: colors.error,
+            color: colors.textPrimary,
+        });
         setIsLoadingBills(false);
     });
 
@@ -109,9 +115,24 @@ export default function RecurringManagementScreen() {
       const billRef = doc(db, "groups", groupId, "bills", billId);
       const billDoc = bills.find(b => b.id === billId); // Pega dados locais
 
-      if(!billDoc) { Alert.alert("Erro", "Conta não encontrada."); return; }
+      if(!billDoc) {  
+        showMessage({
+        message: "Ops!",
+        description: "Conta não encontrada.",
+        backgroundColor: colors.error,
+        color: colors.textPrimary,
+        });
+        return; }
       if(billDoc.isPaid) return; // Já está paga
-      if(!billDoc.category) { Alert.alert("Erro", "Defina uma categoria para esta conta antes de pagar."); return; }
+      if(!billDoc.category) { 
+        showMessage({
+            message: "Ops!",
+            description: "Defina uma categoria para esta conta antes de pagar.",
+            backgroundColor: colors.error,
+            color: colors.textPrimary,
+        });
+        return; 
+    }
 
        // Usa Batch Write para atualizar conta E criar transação
        const batch = writeBatch(db);
@@ -148,26 +169,53 @@ export default function RecurringManagementScreen() {
             await batch.commit();
 
             console.log(`Bill ${billId} marked paid/updated, transaction created.`);
-            Alert.alert("Pago!", `Conta "${billDoc.name}" registrada como paga.`);
+            showMessage({
+            message: "Deu certo!",
+            description: `Conta "${billDoc.name}" registrada como paga.`,
+            backgroundColor: colors.success,
+            color: colors.textPrimary,
+            });
 
       } catch (error) {
           console.error("Error marking bill paid / creating transaction:", error);
-          Alert.alert("Erro", "Não foi possível concluir a operação.");
+            showMessage({
+                message: "Ops!",
+                description: "Não foi possível concluir a operação.",
+                backgroundColor: colors.error,
+                color: colors.textPrimary,
+            });
       }
   };
 
     const handleDeleteBill = async (billId: string) => {
-        if (!groupId) { Alert.alert("Erro", "Grupo não identificado."); return; }
+        if (!groupId) { 
+            showMessage({
+                message: "Ops!",
+                description: "Grupo não identificado.",
+                backgroundColor: colors.error,
+                color: colors.textPrimary,
+            });
+            return; }
         // A confirmação agora é feita no BillListItem, aqui apenas executamos
         console.log("RecurringScreen: Deleting bill", billId);
         const billRef = doc(db, "groups", groupId, "bills", billId);
         try {
             await deleteDoc(billRef);
-            Alert.alert("Sucesso", "Conta/Lembrete excluído.");
+            showMessage({
+            message: "Deu certo!",
+            description: "Conta excluída com sucesso.",
+            backgroundColor: colors.success,
+            color: colors.textPrimary,
+            });
             // O listener onSnapshot removerá da UI
         } catch (error) {
             console.error("Error deleting bill:", error);
-            Alert.alert("Erro", "Não foi possível excluir a conta.");
+            showMessage({
+            message: "Ops!",
+            description: "Não foi possível excluir a conta.",
+            backgroundColor: colors.error,
+            color: colors.textPrimary,
+            });
         }
     };
 
